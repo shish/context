@@ -1,0 +1,31 @@
+#!/usr/bin/python
+
+from optparse import OptionParser
+import sys
+import contextview as c
+
+
+def main(argv):
+    parser = OptionParser()
+    parser.add_option("-i", "--import", dest="log_file",
+            help="import log file to database", metavar="LOG")
+    parser.add_option("-d", "--database", dest="database", default="context.cdb",
+            help="database file to use", metavar="DB")
+    parser.add_option("-g", "--geometry", dest="geometry",
+            help="location and size of window", metavar="GM")
+    parser.add_option("-r", "--row-height", dest="row_height", default=140,
+            type=int, help="height of the rows", metavar="PX")
+    (options, args) = parser.parse_args(argv)
+
+    # lol constants
+    c.ROW_HEIGHT=options.row_height
+
+    if options.log_file and options.database:
+        c.compile_log(options.log_file, options.database)
+
+    elif options.database:
+        c.display(options.database, options.geometry)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
