@@ -439,7 +439,7 @@ def display(database_file, geometry=None):
         return 1
 
     if not os.path.exists(database_file):
-        print("Context dump file '%s' does not exists" % database_file)
+        print("Context dump file '%s' does not exist" % database_file)
         return 2
 
     try:
