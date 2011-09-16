@@ -13,6 +13,7 @@ import datetime
 import sqlite3
 import sys
 import time
+import os
 
 
 NAME = "Context"
@@ -435,6 +436,16 @@ def display(database_file, geometry=None):
     if not have_tk:
         print("Couldn't find Tk libraries")
         return 1
+
+    if not os.path.exists(database_file):
+        print("Context dump file '%s' does not exists" % database_file)
+        return 2
+
+    try:
+        sqlite3.connect(database_file).execute("SELECT * FROM cbtv_events LIMIT 1")
+    except sqlite3.OperationalError as e:
+        print("'%s' is not a valid context dump" % database_file)
+        return 3
 
     root = Tk()
     root.title(NAME)
