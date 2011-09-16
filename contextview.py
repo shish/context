@@ -233,6 +233,7 @@ class _App:
         def _lbox_selected(*args):
             selected_idx = int(li.curselection()[0])
             self.render_start.set(bm_values[selected_idx])
+            self.canvas.xview_moveto(0)
         li.bind('<Double-Button-1>', _lbox_selected)
 
     def scale_view(self, e=None, n=1):
