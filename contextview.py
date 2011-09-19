@@ -455,7 +455,7 @@ def display(database_file, geometry=None):
 
     root = Tk()
     if os.name == "nt":
-        root.wm_iconbitmap(default="boomtools.ico")
+        root.wm_iconbitmap(default="images/boomtools.ico")
     root.title(NAME)
     #root.state("zoomed")
     #_center(root)
