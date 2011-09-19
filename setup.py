@@ -5,10 +5,18 @@ try:
 except ImportError:
     build_ext = None
 
-ext_modules = [Extension("contextview", ["contextview.py"])]
-
 setup(
-  name = 'Context Viewer',
-  cmdclass = {'build_ext': build_ext},
-  ext_modules = ext_modules
+    name = 'Context',
+    version = "0.9.0",
+    author = "Shish",
+    author_email = "shish@civicboom.com",
+    url = "http://www.boomtools.co.uk/context",
+    cmdclass = {'build_ext': build_ext},
+
+    scripts = ["launcher", ],
+    ext_modules = [Extension("contextview", ["contextview.py"]), ],
+    data_files = [
+        ('', ['boomtools.ico']),
+        ('images', ['images/end.gif', 'images/next.gif', 'images/prev.gif', 'images/start.gif']),
+    ],
 )
