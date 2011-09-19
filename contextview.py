@@ -57,11 +57,13 @@ def compile_log(log_file, database_file):
 try:
     from Tkinter import *
     from ttk import *
+    from tkMessageBox import *
     have_tk = True
 except ImportError:
     try:
         from tkinter import *
         from tkinter.ttk import *
+        #from tkMessageBox import * # python 3?
         have_tk = True
     except ImportError:
         have_tk = False
@@ -443,20 +445,27 @@ def display(database_file, geometry=None):
         print("Couldn't find Tk libraries")
         return 1
 
+    # set up the root window early, so we can control it (and hide it)
+    # by default, showerror() will create a random blank window as root
+    root = Tk()
+    if os.name == "nt":
+        root.wm_iconbitmap(default="images/boomtools.ico")
+    root.title(NAME)
+
     if not os.path.exists(database_file):
-        print("Context dump file '%s' does not exist" % database_file)
+        root.withdraw()
+        root.overrideredirect(True)
+        showerror("Error", "Context dump file '%s' does not exist" % database_file)
         return 2
 
     try:
         sqlite3.connect(database_file).execute("SELECT * FROM cbtv_events LIMIT 1")
     except sqlite3.OperationalError as e:
-        print("'%s' is not a valid context dump" % database_file)
+        root.withdraw()
+        root.overrideredirect(True)
+        showerror("Error", "'%s' is not a valid context dump" % database_file, parent=None)
         return 3
 
-    root = Tk()
-    if os.name == "nt":
-        root.wm_iconbitmap(default="images/boomtools.ico")
-    root.title(NAME)
     #root.state("zoomed")
     #_center(root)
     _App(root, database_file)
