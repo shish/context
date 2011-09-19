@@ -16,7 +16,7 @@ setup(
     scripts = ["launcher", ],
     ext_modules = [Extension("contextview", ["contextview.py"]), ],
     data_files = [
-        ('', ['boomtools.ico']),
-        ('images', ['images/end.gif', 'images/next.gif', 'images/prev.gif', 'images/start.gif']),
+        ('images', ['images/boomtools.ico', 'images/end.gif', 'images/next.gif', 'images/prev.gif', 'images/start.gif']),
+        ('api', ["context.py", ]),
     ],
 )
