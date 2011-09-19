@@ -157,7 +157,7 @@ class _App:
 
         # in windows, mouse wheel events always go to the root window o_O
         self.master.bind("<MouseWheel>", lambda e: self.scale_view(e,
-            ((1.0 * 1.1) if e.delta < 0 else (1.0 / 1.1))
+            ((1.0 * 1.1) if e.delta > 0 else (1.0 / 1.1))
         ))
 
         drag_move = """
