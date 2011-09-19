@@ -36,7 +36,7 @@ setup(
     options = {
         "py2exe": {
             "optimize": 2,
-            "bundle_files": 3, # 1 (bundle all) would be nicer, but no win64 support :(
+            "bundle_files": 1, # requires hacked build_exe.py with tcl/tk blacklisted
             "compressed": True,
             "excludes": ["doctest", "pdb", "unittest", "difflib", "inspect"],
         }
