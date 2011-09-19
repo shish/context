@@ -59,7 +59,12 @@ try:
     from ttk import *
     have_tk = True
 except ImportError:
-    have_tk = False
+    try:
+        from tkinter import *
+        from tkinter.ttk import *
+        have_tk = True
+    except ImportError:
+        have_tk = False
 
 
 class _App:
