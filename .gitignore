@@ -3,6 +3,7 @@
 
 context.cdb
 context.*log
+context.spec
 
 pyinstaller-*/
 build/
