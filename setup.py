@@ -22,8 +22,8 @@ setup(
 
     # cython
     cmdclass = {'build_ext': build_ext},
-    #ext_modules = [Extension("contextview", ["contextview.py"]), ],
-    py_modules = ["contextview", ],
+    ext_modules = [Extension("contextview", ["contextview.py"]), ],  # binary build
+    #py_modules = ["contextview", ],  # bytecode build
 
     # py2exe
     windows = [
