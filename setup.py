@@ -32,7 +32,7 @@ setup(
             "icon_resources": [(1, "images/boomtools.ico")],
         }
     ],
-    zipfile = None,
+    zipfile = "context.dll",
     options = {
         "py2exe": {
             "optimize": 2,
