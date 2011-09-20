@@ -5,6 +5,7 @@
 Name "Context ${VERSION}"
 Outfile context-installer-${VERSION}.exe
 Icon images\boomtools.ico
+LicenseData LICENSE.txt
 
 InstallDir $PROGRAMFILES32\Context
 InstallDirRegKey HKCU "Software\Context" ""
