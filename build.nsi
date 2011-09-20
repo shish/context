@@ -1,5 +1,4 @@
 !define VERSION "0.9.0"
-
 !system 'C:\Python27\python.exe pyinstaller-1.5.1\pyinstaller.py --onefile --windowed --upx --icon images/boomtools.ico context'
 
 ; !include "MUI2.nsh"
@@ -44,5 +43,4 @@ section "Uninstall"
 	rmdir /r $INSTDIR\api
 
 	rmdir $INSTDIR
-
 sectionEnd
