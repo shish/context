@@ -1,0 +1,9 @@
+*.pyc
+*.swp
+
+context.cdb
+context.*log
+
+pyinstaller-*/
+build/
+dist/

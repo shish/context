@@ -1,8 +1,11 @@
 !define VERSION "0.9.0"
 
+!system 'C:\Python27\python.exe pyinstaller-1.5.1\pyinstaller.py --onefile --windowed --upx --icon images/boomtools.ico context'
+
 ; !include "MUI2.nsh"
 Name "Context ${VERSION}"
 Outfile context-installer-${VERSION}.exe
+Icon images\boomtools.ico
 
 InstallDir $PROGRAMFILES32\Context
 InstallDirRegKey HKCU "Software\Context" ""
@@ -20,9 +23,12 @@ SetCompressor /SOLID lzma
 # TargetMinimalOS 5.0
 
 section
+	setOutPath $INSTDIR\api
+	file "api\"
+	setOutPath $INSTDIR\images
+	file "images\"
 	setOutPath $INSTDIR
-
-	file /r "dist\*.*"
+	file "dist\context.exe"
 
 	createShortCut "$SMPROGRAMS\Context.lnk" "$INSTDIR\context.exe"
 	WriteRegStr HKCU "Software\Context" "" $INSTDIR
@@ -34,11 +40,9 @@ section "Uninstall"
 	delete "$SMPROGRAMS\Context.lnk"
 
 	delete $INSTDIR\context.exe
-	delete $INSTDIR\tk85.dll
-	delete $INSTDIR\tcl85.dll
-	rmdir /r $INSTDIR\tcl
 	rmdir /r $INSTDIR\images
 	rmdir /r $INSTDIR\api
+
 	rmdir $INSTDIR
 
 sectionEnd
