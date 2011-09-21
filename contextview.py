@@ -92,7 +92,7 @@ class _App:
             else:
                 Button(f,
                     text=t, command=c, padding=0
-                ).pack(side="right")
+                ).pack(side="right", fill=Y)
 
         _la("  Start ")
         _sp(0, int(time.time()), 10, self.render_start, 15)
