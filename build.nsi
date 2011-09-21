@@ -1,13 +1,14 @@
 !define VERSION "0.9.0"
 !system 'C:\Python27\python.exe pyinstaller-1.5.1\pyinstaller.py --onefile --windowed --upx --icon images/boomtools.ico context'
 
+
 ; !include "MUI2.nsh"
 Name "Context ${VERSION}"
 Outfile context-installer-${VERSION}.exe
 Icon images\boomtools.ico
-LicenseData LICENSE.txt
+LicenseData docs\LICENSE.txt
 
-InstallDir $PROGRAMFILES32\Context
+InstallDir "$PROGRAMFILES32\Context"
 InstallDirRegKey HKCU "Software\Context" ""
 
 Page license
@@ -27,6 +28,8 @@ section
 	file "api\"
 	setOutPath $INSTDIR\images
 	file "images\"
+	setOutPath $INSTDIR\docs
+	file "docs\"
 	setOutPath $INSTDIR
 	file "dist\context.exe"
 
@@ -40,6 +43,7 @@ section "Uninstall"
 	delete "$SMPROGRAMS\Context.lnk"
 
 	delete $INSTDIR\context.exe
+	rmdir /r $INSTDIR\docs
 	rmdir /r $INSTDIR\images
 	rmdir /r $INSTDIR\api
 
