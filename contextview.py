@@ -229,6 +229,10 @@ class _App:
 
         li.config(yscrollcommand=sb.set)
 
+        # render the laid out window before adding data;
+        # the alternative is rendering the non-laid-out window
+        t.update()
+
         # load data
         bm_values = []
         for ts, tx in self.c.execute("SELECT timestamp, text FROM cbtv_events WHERE type = 'BMARK' ORDER BY timestamp"):
