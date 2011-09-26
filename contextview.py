@@ -218,7 +218,7 @@ class _App:
         t.lift(self.master)
         t.grid_columnconfigure(0, weight=1)
         t.grid_rowconfigure(0, weight=1)
-        t.wm_attributes("-topmost", 1)
+        t.transient(self.master)
         t.title("Bookmarks")
 
         li = Listbox(t, height=10, width=40)
