@@ -148,7 +148,7 @@ class _App:
 
         master.grid_columnconfigure(0, weight=1)
         master.grid_rowconfigure(1, weight=1)
-        self.controls.grid(column=0, row=0, sticky=(W, E))
+        self.controls.grid(column=0, row=0, sticky=(W, E), columnspan=2)
         self.canvas.grid(  column=0, row=1, sticky=(N, W, E, S))
         self.v.grid(       column=1, row=1, sticky=(N, S))
         self.h.grid(       column=0, row=2, sticky=(W, E))
