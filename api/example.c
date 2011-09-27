@@ -4,24 +4,24 @@
 #include "context.h"
 
 void hello() {
-	CTX_LOG_START("starting to say hello");
+	ctx_log_start("saying hello");
 	printf("hello ");
 	sleep(1);
-	CTX_LOG_ENDOK("starting to say hello");
+	ctx_log_endok("saying hello");
 }
 
 void world() {
-	CTX_LOG_START("starting to say world");
+	ctx_log_start("saying world");
 	printf("world\n");
 	sleep(2);
-	CTX_LOG_ENDOK("starting to say world");
+	ctx_log_endok("saying world");
 }
 
 int main(int argc, char *argv[]) {
-	ctx_set_log("example.c.ctxt");
-	CTX_LOG_START("running program");
+	ctx_set_log("output.c.ctxt");
+	ctx_log_start("running program");
 	hello();
 	world();
-	CTX_LOG_ENDOK("running program");
+	ctx_log_endok("running program");
 	return 0;
 }

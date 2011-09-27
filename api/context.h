@@ -1,14 +1,9 @@
 #include <stdio.h>
 
-#define CTX_BMARK "BMARK"
-#define CTX_START "START"
-#define CTX_ENDOK "ENDOK"
-#define CTX_ENDER "ENDER"
-
-#define CTX_LOG_BMARK(text) ctx_log_msg(__FUNCTION__, text, CTX_BMARK)
-#define CTX_LOG_START(text) ctx_log_msg(__FUNCTION__, text, CTX_START)
-#define CTX_LOG_ENDOK(text) ctx_log_msg(__FUNCTION__, text, CTX_ENDOK)
-#define CTX_LOG_ENDER(text) ctx_log_msg(__FUNCTION__, text, CTX_ENDER)
+#define ctx_log_bmark(text) ctx_log_msg(__FUNCTION__, text, "BMARK")
+#define ctx_log_start(text) ctx_log_msg(__FUNCTION__, text, "START")
+#define ctx_log_endok(text) ctx_log_msg(__FUNCTION__, text, "ENDOK")
+#define ctx_log_ender(text) ctx_log_msg(__FUNCTION__, text, "ENDER")
 
 extern FILE *context_log;
 

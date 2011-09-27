@@ -5,14 +5,22 @@
 
 #include "context.h"
 
-FILE *context_log;
+FILE *_context_log;
 
 void ctx_set_log(const char *name) {
-	context_log = fopen(name, "a");
+	if(name) {
+		_context_log = fopen(name, "a");
+	}
+	else {
+		if(_context_log) {
+			fclose(_context_log);
+		}
+		_context_log = NULL;
+	}
 }
 
 void ctx_log_msg(const char *func, const char *text, const char *type) {
-	if(context_log) {
+	if(_context_log) {
 		struct timeb tmb;
 		char hostname[256];
 
@@ -20,12 +28,12 @@ void ctx_log_msg(const char *func, const char *text, const char *type) {
 		gethostname(hostname, 256);
 
         fprintf(
-			context_log,
+			_context_log,
 			"%ld.%d %s %d %d %s %s %s\n",
             tmb.time, tmb.millitm,
             hostname,
 			getpid(),
-			0, //gettid(),
+			getpid(), //gettid(),
             type, func, text
         );
 	}
