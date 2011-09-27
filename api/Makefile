@@ -7,4 +7,4 @@ test: example example.py
 	./example.php
 
 clean:
-	rm -f *.o *.ctxt example
+	rm -f *.o *.pyc *.ctxt example
