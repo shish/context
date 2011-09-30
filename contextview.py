@@ -8,6 +8,7 @@
 # - seeing what is locking software is good
 
 from __future__ import print_function
+from optparse import OptionParser
 import threading
 import datetime
 import sqlite3
@@ -58,6 +59,7 @@ try:
     from Tkinter import *
     from ttk import *
     from tkMessageBox import *
+    from tkFileDialog import askopenfilename, asksaveasfilename
     have_tk = True
 except ImportError:
     try:
@@ -477,3 +479,42 @@ def display(database_file, geometry=None):
         root.geometry(geometry)
     root.mainloop()
     return 0
+
+
+def main(argv):
+    parser = OptionParser()
+    parser.add_option("-g", "--geometry", dest="geometry",
+            help="location and size of window", metavar="GM")
+    parser.add_option("-r", "--row-height", dest="row_height", default=140,
+            type=int, help="height of the rows", metavar="PX")
+    (options, args) = parser.parse_args(argv)
+
+    # lol constants
+    ROW_HEIGHT=options.row_height
+
+    if len(args) > 1:
+        filename = args[1]
+    else:
+        root = Tk()
+        if os.name == "nt":
+            root.wm_iconbitmap(default="images/boomtools.ico")
+        root.withdraw()
+        root.overrideredirect(True)
+        filename = askopenfilename(
+            filetypes = [("All Supported Types", "*.ctxt *.cbin"), ("Context Text", "*.ctxt"), ("Context Binary", "*.cbin")],
+        )
+        root.destroy()
+        if not filename:
+            return 1
+
+    path, ext = os.path.splitext(filename)
+    if ext == ".ctxt":
+        compile_log(path+".ctxt", path+".cbin")
+        ext = ".cbin"
+
+    if ext == ".cbin":
+        display(path+ext, options.geometry)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
