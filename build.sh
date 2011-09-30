@@ -2,7 +2,7 @@
 
 VER=0.9
 
-./pyinstaller-1.5.1/pyinstaller.py --onefile context
+../pyinstaller-1.5.1/pyinstaller.py --onefile context
 
 rm -rf context-$VER
 mkdir context-$VER
