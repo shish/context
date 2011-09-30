@@ -10,4 +10,4 @@ cp -rv api context-$VER/
 cp -rv images context-$VER/
 cp -rv docs context-$VER/
 cp dist/* context-$VER/
-tar cvzf context-$VER.tgz --exclude "*.pyc" context-$VER
+tar cvzf context-$VER-`uname -i`.tgz --exclude "*.pyc" context-$VER
