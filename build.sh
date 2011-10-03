@@ -7,7 +7,7 @@ ARCH=`uname -m`
 echo "VERSION='$VER'" > ctx_ver.py
 echo "!define VERSION '${VER}'" > ctx_ver.nsh
 
-../pyinstaller-1.5.1/pyinstaller.py --onefile --windowed --upx --icon images/boomtools.ico context
+../pyinstaller-1.5.1/pyinstaller.py --tk --onefile --windowed --upx --icon images/boomtools.ico context
 
 if [ "`uname -s`" = "Linux" ] ; then
 	rm -rf context-$VER
