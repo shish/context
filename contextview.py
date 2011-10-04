@@ -27,6 +27,7 @@ BLOCK_HEIGHT = 20
 #######################################################################
 
 def compile_log(log_file, database_file):
+    os.unlink(database_file)
     db = sqlite3.connect(database_file)
     c = db.cursor()
     c.execute("""
