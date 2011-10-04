@@ -102,7 +102,7 @@ class _App:
         _la("  Seconds ")
         _sp(1, 60, 1, self.render_len, 3)
         _la("  Pixels per second ")
-        _sp(100, 5000, 100, self.scale, 5)
+        _sp(50, 5000, 100, self.scale, 5)
 
         _bu(self.img_end, self.end_event)
         _bu(self.img_next, self.next_event)
@@ -291,7 +291,7 @@ class _App:
         """
         Render settings changed, re-render with existing data
         """
-        if self.scale.get() < 100:
+        if self.scale.get() < 50:
             return
         self.render_clear()
         self.render_base()
