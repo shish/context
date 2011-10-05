@@ -373,7 +373,7 @@ class _App:
                         stack_len = len(thread_level_starts[thread_idx])
                         self.show(int(start_px), int(length_px), thread_idx, stack_len, _function, _text, _io=="ENDOK")
 
-            elif _io == "!":
+            elif _io == "BMARK":
                 pass  # render bookmark
 
     def show(self, start, length, thread, level, function, text, ok):
