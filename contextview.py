@@ -166,17 +166,16 @@ class _App:
             ((1.0 * 1.1) if e.delta > 0 else (1.0 / 1.1))
         ))
 
-        drag_move = """
-        def _sm(e):
-            self.st = self.render_start.get()
-            self.sx = e.x
-            self.sy = e.y
-        def _cm(e):
-            self.render_start.set(self.st + float(self.sx - e.x)/self.scale.get())
-            self.render()
-        self.canvas.bind("<1>", _sm)
-        self.canvas.bind("<B1-Motion>", _cm)
-        """
+        # Drag based movement
+        #def _sm(e):
+        #    self.st = self.render_start.get()
+        #    self.sx = e.x
+        #    self.sy = e.y
+        #def _cm(e):
+        #    self.render_start.set(self.st + float(self.sx - e.x)/self.scale.get())
+        #    self.render()
+        #self.canvas.bind("<1>", _sm)
+        #self.canvas.bind("<B1-Motion>", _cm)
 
         self.update()
 
