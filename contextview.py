@@ -27,13 +27,14 @@ BLOCK_HEIGHT = 20
 #######################################################################
 
 def compile_log(log_file, database_file, append=False):
-    if not append:
+    if not append and os.path.exists(database_file):
         os.unlink(database_file)
     db = sqlite3.connect(database_file)
     c = db.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS cbtv_events(
-            timestamp float not null,
+            start float not null,
+            end float,
             node varchar(32) not null,
             process integer not null,
             thread varchar(32) not null,
@@ -42,12 +43,36 @@ def compile_log(log_file, database_file, append=False):
             text text not null
         )
     """)
+
+    thread_names = []
+    thread_stacks = []
+
     for line in open(log_file):
-        c.execute(
-            "INSERT INTO cbtv_events VALUES(?, ?, ?, ?, ?, ?, ?)",
-            line.strip().split(" ", 6)
-        )
-    c.execute("CREATE INDEX IF NOT EXISTS ts_idx ON cbtv_events(timestamp)")
+        parts = (timestamp, node, process, thread, type, function, text) = line.strip().split(" ", 6)
+
+        thread_name = node+process+thread
+        if thread_name not in thread_names:
+            thread_names.append(thread_name)
+            thread_stacks.append([])
+        thread_id = thread_names.index(thread_name)
+
+        if type == "BMARK":
+            c.execute(
+                "INSERT INTO cbtv_events VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                (timestamp, timestamp, node, process, thread, type, function, text)
+            )
+
+        if type == "START":
+            thread_stacks[thread_id].append(timestamp)
+
+        if type == "ENDOK" or type == "ENDER":
+            sp = thread_stacks[thread_id].pop()
+            c.execute(
+                "INSERT INTO cbtv_events VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                (sp, timestamp, node, process, thread, type, function, text)
+            )
+
+    c.execute("CREATE INDEX IF NOT EXISTS ts_idx ON cbtv_events(start, end)")
     c.execute("CREATE INDEX IF NOT EXISTS ty_idx ON cbtv_events(type)")
     c.close()
     db.commit()
@@ -179,17 +204,29 @@ class _App:
 
         self.render_start.set(self.get_start(0))
 
-    def get_start(self, start_hint=1, io="START"):
-        return list(self.c.execute(
-            "SELECT min(timestamp) FROM cbtv_events WHERE timestamp > ? AND type = ?",
-            [start_hint, io]
-        ))[0][0]
+    def get_start(self, start_hint=1, io=None):
+        if io:
+            return list(self.c.execute(
+                "SELECT min(start) FROM cbtv_events WHERE start > ? AND type = ?",
+                [start_hint, io]
+            ))[0][0]
+        else:
+            return list(self.c.execute(
+                "SELECT min(start) FROM cbtv_events WHERE start > ?",
+                [start_hint, ]
+            ))[0][0]
 
-    def get_end(self, end_hint=0, io="ENDOK"):
-        return list(self.c.execute(
-            "SELECT max(timestamp) FROM cbtv_events WHERE timestamp < ? AND type = ?",
-            [end_hint, io]
-        ))[0][0]
+    def get_end(self, end_hint=0, io=None):
+        if io:
+            return list(self.c.execute(
+                "SELECT max(end) FROM cbtv_events WHERE end < ? AND type = ?",
+                [end_hint, io]
+            ))[0][0]
+        else:
+            return list(self.c.execute(
+                "SELECT max(end) FROM cbtv_events WHERE end < ?",
+                [end_hint, ]
+            ))[0][0]
 
     def end_event(self):
         next_ts = self.get_end(sys.maxint, "BMARK")
@@ -284,7 +321,7 @@ class _App:
         """
         s = self.render_start.get() - 1
         e = self.render_start.get() + self.render_len.get() + 1
-        self.data = list(self.c.execute("SELECT * FROM cbtv_events WHERE timestamp BETWEEN ? AND ?", (s, e)))
+        self.data = list(self.c.execute("SELECT * FROM cbtv_events WHERE end > ? AND start < ? ORDER BY start ASC, end DESC", (s, e)))
         self.render()
 
     def render(self, *args):
@@ -347,30 +384,24 @@ class _App:
 
         threads = self.threads
         #thread_level_starts = [[], ] * len(self.threads)  # this bug is subtle and hilarious
-        thread_level_starts = [[] for n in range(len(self.threads))]
+        thread_level_ends = [[] for n in range(len(self.threads))]
 
         for row in self.data:
-            (_time, _node, _process, _thread, _io, _function, _text) = row
-            _time = float(_time)
+            (_start, _end, _node, _process, _thread, _io, _function, _text) = row
+            _start = float(_start)
+            _end = float(_end)
             thread_idx = threads.index(_thread)
 
-            # when an event starts, take note of the start time
-            if _io == "START":
-                thread_level_starts[thread_idx].append(_time)
-
             # when the event ends, render it
-            elif _io == "ENDOK" or _io == "ENDER":
-                # if we start rendering mid-file, we may see the ends
-                # of events that haven't started yet
-                if len(thread_level_starts[thread_idx]):
-                    event_start = thread_level_starts[thread_idx].pop()
-                    event_end = _time
-                    if event_start < _rs + _rl:
-                        start_px  = (event_start - _rs) * _sc
-                        end_px    = (event_end - _rs) * _sc
-                        length_px = end_px - start_px
-                        stack_len = len(thread_level_starts[thread_idx])
-                        self.show(int(start_px), int(length_px), thread_idx, stack_len, _function, _text, _io=="ENDOK")
+            if _io == "ENDOK" or _io == "ENDER":
+                while thread_level_ends[thread_idx] and thread_level_ends[thread_idx][-1] <= _start:
+                    thread_level_ends[thread_idx].pop()
+                thread_level_ends[thread_idx].append(_end)
+                start_px  = (_start - _rs) * _sc
+                end_px    = (_end - _rs) * _sc
+                length_px = end_px - start_px
+                stack_len = len(thread_level_ends[thread_idx]) - 1
+                self.show(int(start_px), int(length_px), thread_idx, stack_len, _function, _text, _io=="ENDOK")
 
             elif _io == "BMARK":
                 pass  # render bookmark
