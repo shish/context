@@ -122,7 +122,7 @@ class _App:
         self.c = db.cursor()
 
         self.threads = [n[0] for n in self.c.execute("SELECT DISTINCT thread FROM cbtv_events ORDER BY thread")]
-        self.render_start = DoubleVar(master, self.get_start(0))
+        self.render_start = DoubleVar(master, 0)
         self.render_len = IntVar(master, 10)
         self.scale = IntVar(master, 1000)
 
@@ -177,7 +177,7 @@ class _App:
         #self.canvas.bind("<1>", _sm)
         #self.canvas.bind("<B1-Motion>", _cm)
 
-        self.update()
+        self.render_start.set(self.get_start(0))
 
     def get_start(self, start_hint=1, io="START"):
         return list(self.c.execute(
