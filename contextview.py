@@ -17,6 +17,20 @@ import sys
 import time
 import os
 
+try:
+    from Tkinter import *
+    from tkMessageBox import *
+    from tkFileDialog import askopenfilename, asksaveasfilename
+    have_tk = True
+except ImportError:
+    have_tk = False
+
+try:
+    from ttk import *
+    have_ttk = True
+except ImportError:
+    have_ttk = False
+
 
 NAME = "Context"
 ROW_HEIGHT = 140
@@ -28,13 +42,7 @@ BLOCK_HEIGHT = 20
 #######################################################################
 
 def compile_log(log_file, database_file, append=False):
-    root = Tk()
-    if os.name == "nt":
-        root.wm_iconbitmap(default="images/boomtools.ico")
-    root.title("Importing .ctxt")
-    label = Label(root, text="Loading", width=30, anchor=CENTER)
-    label.pack(padx=5, pady=5)
-    root.update()
+    _lb = _LoadBox(None, "Importing .ctxt")
 
     if not append and os.path.exists(database_file):
         os.unlink(database_file)
@@ -62,8 +70,7 @@ def compile_log(log_file, database_file, append=False):
     fp.seek(0, 0)
     for n, line in enumerate(fp):
         if n % 1000 == 0:
-            label.configure(text="Loaded %d events (%d%%)" % (n, fp.tell()*100.0/f_size))
-            root.update()
+            _lb.update("Imported %d events (%d%%)" % (n, fp.tell()*100.0/f_size))
 
         parts = (timestamp, node, process, thread, type, function, text) = line.strip().split(" ", 6)
 
@@ -90,34 +97,40 @@ def compile_log(log_file, database_file, append=False):
             )
     fp.close()
 
-    label.configure(text="Indexing data...")
-    root.update()
+    _lb.update("Indexing data...")
 
     c.execute("CREATE INDEX IF NOT EXISTS ts_idx ON cbtv_events(start, end)")
     c.execute("CREATE INDEX IF NOT EXISTS ty_idx ON cbtv_events(type)")
     c.close()
     db.commit()
 
-    root.destroy()
+    _lb.destroy()
 
 
 #######################################################################
 # GUI Out
 #######################################################################
 
-try:
-    from Tkinter import *
-    from tkMessageBox import *
-    from tkFileDialog import askopenfilename, asksaveasfilename
-    have_tk = True
-except ImportError:
-    have_tk = False
+class _LoadBox:
+    def __init__(self, master, title):
+        if master:
+            self.root = Toplevel(master)
+            self.root.transient(master)
+        else:
+            self.root = Tk()
+        if os.name == "nt":
+            self.root.wm_iconbitmap(default="images/boomtools.ico")
+        self.root.title(title)
+        self.label = Label(self.root, text=title, width=30, anchor=CENTER)
+        self.label.pack(padx=5, pady=5)
+        self.root.update()
 
-try:
-    from ttk import *
-    have_ttk = True
-except ImportError:
-    have_ttk = False
+    def update(self, text):
+        self.label.configure(text=text)
+        self.root.update()
+
+    def destroy(self):
+        self.root.destroy()
 
 
 class _App:
@@ -168,6 +181,8 @@ class _App:
     def __init__(self, master, database_file):
         self.master = master
         self.char_w = -1
+        self.window_ready = False
+        self.data = []
 
         try:
             os.makedirs(os.path.expanduser(os.path.join("~", ".config")))
@@ -175,8 +190,7 @@ class _App:
             pass
         self.config_file = os.path.expanduser(os.path.join("~", ".config", "context.cfg"))
 
-        db = sqlite3.connect(database_file)
-        self.c = db.cursor()
+        self.c = sqlite3.connect(database_file)
 
         self.threads = [n[0] for n in self.c.execute("SELECT DISTINCT thread FROM cbtv_events ORDER BY thread")]
         self.render_start = DoubleVar(master, 0)
@@ -237,6 +251,9 @@ class _App:
         #self.canvas.bind("<1>", _sm)
         #self.canvas.bind("<B1-Motion>", _cm)
 
+        self.master.update()
+
+        self.window_ready = True
         self.render_start.set(self.get_start(0))
 
     def load_settings(self):
@@ -388,10 +405,33 @@ class _App:
         """
         Data settings changed, get new data and re-render
         """
+        if not self.window_ready:
+            # update() is called a couple of times during init()
+            return
+
+        _lb = _LoadBox(self.master, "Loading Events")
+
+        self.n = 0
+        def progress(*args):
+            try:
+                self.n = self.n + 1
+                _lb.update("Loading... (%dk opcodes)" % (self.n*10))
+                return 0
+            except Exception as e:
+                return 1  # non-zero = cancel query
+        self.c.set_progress_handler(progress, 10000)
+
         s = self.render_start.get() - 1
         e = self.render_start.get() + self.render_len.get() + 1
-        self.data = list(self.c.execute("SELECT * FROM cbtv_events WHERE end > ? AND start < ? ORDER BY start ASC, end DESC", (s, e)))
+        try:
+            self.data = list(self.c.execute("SELECT * FROM cbtv_events WHERE end > ? AND start < ? ORDER BY start ASC, end DESC", (s, e)))
+        except sqlite3.OperationalError:
+            self.data = []
         self.render()
+
+        self.c.set_progress_handler(None, 0)
+
+        _lb.destroy()
 
     def render(self, *args):
         """
@@ -538,8 +578,9 @@ class _App:
 
 
 def _center(root):
-    w = 800
-    h = 600
+    root.update()
+    w = root.winfo_reqwidth()
+    h = root.winfo_reqheight()
     ws = root.winfo_screenwidth()
     hs = root.winfo_screenheight()
     x = (ws/2) - (w/2)
