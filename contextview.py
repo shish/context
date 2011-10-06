@@ -9,6 +9,7 @@
 
 from __future__ import print_function
 from optparse import OptionParser
+import ConfigParser
 import threading
 import datetime
 import sqlite3
@@ -99,6 +100,10 @@ except ImportError:
 
 
 class _App:
+    #########################################################################
+    # GUI setup
+    #########################################################################
+
     def __control_box(self, master):
         f = Frame(master)
 
@@ -143,6 +148,12 @@ class _App:
         self.master = master
         self.char_w = -1
 
+        try:
+            os.makedirs(os.path.expanduser(os.path.join("~", ".config")))
+        except OSError as e:
+            pass
+        self.config_file = os.path.expanduser(os.path.join("~", ".config", "context.cfg"))
+
         db = sqlite3.connect(database_file)
         self.c = db.cursor()
 
@@ -150,6 +161,9 @@ class _App:
         self.render_start = DoubleVar(master, 0)
         self.render_len = IntVar(master, 10)
         self.scale = IntVar(master, 1000)
+
+        self.load_settings()
+        master.protocol("WM_DELETE_WINDOW", self.save_settings_and_quit)
 
         self.render_start.trace_variable("w", self.update)
         self.render_len.trace_variable("w", self.update)
@@ -203,6 +217,36 @@ class _App:
         #self.canvas.bind("<B1-Motion>", _cm)
 
         self.render_start.set(self.get_start(0))
+
+    def load_settings(self):
+        try:
+            cp = ConfigParser.SafeConfigParser()
+            cp.readfp(file(self.config_file))
+            self.render_len.set(cp.getint("gui", "render_len"))
+            self.scale.set(cp.getint("gui", "scale"))
+            #self._file_opts['initialdir'] = cp.get("gui", "last-log-dir")
+        except Exception as e:
+            print("Error loading settings from %s:\n  %s" % (self.config_file, e))
+
+    def save_settings(self):
+        try:
+            cp = ConfigParser.SafeConfigParser()
+            cp.add_section("gui")
+            cp.set("gui", "render_len", str(self.render_len.get()))
+            cp.set("gui", "scale", str(self.scale.get()))
+            #cp.set("gui", "last-log-dir", self._file_opts['initialdir'])
+            cp.write(file(self.config_file, "w"))
+        except Exception as e:
+            print("Error writing settings to %s:\n  %s" % (self.config_file, e))
+
+    def save_settings_and_quit(self):
+        self.save_settings()
+        self.master.destroy()
+        self.master.quit()
+
+    #########################################################################
+    # Navigation
+    #########################################################################
 
     def get_start(self, start_hint=1, io=None):
         if io:
@@ -286,6 +330,10 @@ class _App:
             self.render_start.set(bm_values[selected_idx])
             self.canvas.xview_moveto(0)
         li.bind('<Double-Button-1>', _lbox_selected)
+
+    #########################################################################
+    # Rendering
+    #########################################################################
 
     def scale_view(self, e=None, n=1):
         # get the old pos
