@@ -107,18 +107,17 @@ def compile_log(log_file, database_file, append=False):
 
 try:
     from Tkinter import *
-    from ttk import *
     from tkMessageBox import *
     from tkFileDialog import askopenfilename, asksaveasfilename
     have_tk = True
 except ImportError:
-    try:
-        from tkinter import *
-        from tkinter.ttk import *
-        #from tkMessageBox import * # python 3?
-        have_tk = True
-    except ImportError:
-        have_tk = False
+    have_tk = False
+
+try:
+    from ttk import *
+    have_ttk = True
+except ImportError:
+    have_ttk = False
 
 
 class _App:
