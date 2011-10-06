@@ -28,6 +28,14 @@ BLOCK_HEIGHT = 20
 #######################################################################
 
 def compile_log(log_file, database_file, append=False):
+    root = Tk()
+    if os.name == "nt":
+        root.wm_iconbitmap(default="images/boomtools.ico")
+    root.title("Importing .ctxt")
+    label = Label(root, text="Loading", width=30, anchor=CENTER)
+    label.pack(padx=5, pady=5)
+    root.update()
+
     if not append and os.path.exists(database_file):
         os.unlink(database_file)
     db = sqlite3.connect(database_file)
@@ -48,7 +56,15 @@ def compile_log(log_file, database_file, append=False):
     thread_names = []
     thread_stacks = []
 
-    for line in open(log_file):
+    fp = open(log_file)
+    fp.seek(0, 2)
+    f_size = fp.tell()
+    fp.seek(0, 0)
+    for n, line in enumerate(fp):
+        if n % 1000 == 0:
+            label.configure(text="Loaded %d events (%d%%)" % (n, fp.tell()*100.0/f_size))
+            root.update()
+
         parts = (timestamp, node, process, thread, type, function, text) = line.strip().split(" ", 6)
 
         thread_name = node+process+thread
@@ -72,11 +88,17 @@ def compile_log(log_file, database_file, append=False):
                 "INSERT INTO cbtv_events VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                 (sp, timestamp, node, process, thread, type, function, text)
             )
+    fp.close()
+
+    label.configure(text="Indexing data...")
+    root.update()
 
     c.execute("CREATE INDEX IF NOT EXISTS ts_idx ON cbtv_events(start, end)")
     c.execute("CREATE INDEX IF NOT EXISTS ty_idx ON cbtv_events(type)")
     c.close()
     db.commit()
+
+    root.destroy()
 
 
 #######################################################################
