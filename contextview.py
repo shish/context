@@ -72,7 +72,7 @@ def compile_log(log_file, database_file, append=False):
         if n % 1000 == 0:
             _lb.update("Imported %d events (%d%%)" % (n, fp.tell()*100.0/f_size))
 
-        parts = (timestamp, node, process, thread, type, function, text) = line.strip().split(" ", 6)
+        parts = (timestamp, node, process, thread, type, function, text) = line.strip("\n").split(" ", 6)
 
         thread_name = node+process+thread
         if thread_name not in thread_names:
