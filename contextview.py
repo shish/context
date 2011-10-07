@@ -537,11 +537,11 @@ class _App:
         for n in range(rs_px, rs_px+rl_px, 100):
             label = " +%.3f" % (float(n) / _sc - _rl)
             self.canvas.create_line(n-rs_px, 0, n-rs_px, 20+len(self.threads)*ROW_HEIGHT, fill="#CCC", tags="grid")
-            self.canvas.create_text(n-rs_px, 5, text=label, anchor="nw")
+            self.canvas.create_text(n-rs_px, 5, text=label, anchor=NW)
 
         for n in range(0, len(self.threads)):
             self.canvas.create_line(0, 20+ROW_HEIGHT*n, rl_px, 20+ROW_HEIGHT*n, tags="grid")
-            self.canvas.create_text(0, 20+ROW_HEIGHT*(n+1)-5, text=" "+self.threads[n], anchor="sw")
+            self.canvas.create_text(0, 20+ROW_HEIGHT*(n+1)-5, text=" "+self.threads[n], anchor=SW)
 
     def render_data(self):
         """
@@ -607,7 +607,7 @@ class _App:
         )
         t = self.canvas.create_text(
             start, 20+thread*ROW_HEIGHT+level*BLOCK_HEIGHT+3,
-            text=self.truncate_text(text, length), tags="event_label", anchor="nw", width=length,
+            text=self.truncate_text(text, length), tags="event_label", anchor=NW, width=length,
             font="TkFixedFont",
             state="disabled",
         )
@@ -623,7 +623,7 @@ class _App:
         )
         t2 = self.canvas.create_text(
             start+2, 20+thread*ROW_HEIGHT+level*BLOCK_HEIGHT+BLOCK_HEIGHT+2,
-            text=tip, width=max(length, 200), tags="event_tip", anchor="nw",
+            text=tip, width=max(length, 200), tags="event_tip", anchor=NW,
             justify="left", state="hidden",
         )
 
