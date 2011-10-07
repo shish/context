@@ -41,6 +41,35 @@ BLOCK_HEIGHT = 20
 # Application API
 #######################################################################
 
+class LogEvent:
+    def __init__(self, line):
+        parts = line.strip("\n").split(" ", 6)
+        (self.timestamp, self.node, self.process, self.thread, self.type, self.location, self.text) = parts
+
+    def thread_id(self):
+        return "%s-%s-%s" % (self.node, self.process, self.thread)
+
+    def event_str(self):
+        return "%s %s:%s" % (self.location, self.type, self.text)
+
+    def __str__(self):
+        return self.thread_id() + " " + self.event_str()
+
+
+class Event:
+    def __init__(self, row):
+        (
+            self.node, self.process, self.thread,
+            self.start_location, self.end_location,
+            self.start_time, self.end_time,
+            self.start_type, self.end_type,
+            self.start_text, self.end_text,
+        ) = row
+
+    def thread_id(self):
+        return "%s-%s-%s" % (self.node, self.process, self.thread)
+
+
 def compile_log(log_file, database_file, append=False):
     _lb = _LoadBox(None, "Importing .ctxt")
 
@@ -50,14 +79,11 @@ def compile_log(log_file, database_file, append=False):
     c = db.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS cbtv_events(
-            start float not null,
-            end float,
-            node varchar(32) not null,
-            process integer not null,
-            thread varchar(32) not null,
-            type char(5) not null,
-            function text not null,
-            text text not null
+            node varchar(32) not null, process integer not null, thread varchar(32) not null,
+            start_location text not null,   end_location text,
+            start_time float not null,      end_time float,
+            start_type char(5) not null,    end_type char(5),
+            start_text text,                end_text text
         )
     """)
 
@@ -72,35 +98,60 @@ def compile_log(log_file, database_file, append=False):
         if n % 1000 == 0:
             _lb.update("Imported %d events (%d%%)" % (n, fp.tell()*100.0/f_size))
 
-        parts = (timestamp, node, process, thread, type, function, text) = line.strip("\n").split(" ", 6)
+        e = LogEvent(line)
 
-        thread_name = node+process+thread
+        thread_name = e.thread_id()
         if thread_name not in thread_names:
             thread_names.append(thread_name)
             thread_stacks.append([])
         thread_id = thread_names.index(thread_name)
 
-        if type == "BMARK":
+        if e.type == "BMARK":
             c.execute(
-                "INSERT INTO cbtv_events VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-                (timestamp, timestamp, node, process, thread, type, function, text)
+                """
+                INSERT INTO cbtv_events(
+                    node, process, thread,
+                    start_location, start_time, start_type, start_text
+                )
+                VALUES(
+                    ?, ?, ?,
+                    ?, ?, ?, ?
+                )
+                """,
+                (e.node, e.process, e.thread, e.location, e.timestamp, e.type, e.text)
             )
 
-        if type == "START":
-            thread_stacks[thread_id].append(timestamp)
+        if e.type == "START":
+            thread_stacks[thread_id].append(e)
 
-        if type == "ENDOK" or type == "ENDER":
-            sp = thread_stacks[thread_id].pop()
+        if e.type == "ENDOK" or e.type == "ENDER":
+            s = thread_stacks[thread_id].pop()
             c.execute(
-                "INSERT INTO cbtv_events VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-                (sp, timestamp, node, process, thread, type, function, text)
+                """
+                INSERT INTO cbtv_events(
+                    node, process, thread,
+                    start_location, start_time, start_type, start_text,
+                    end_location, end_time, end_type, end_text
+                    )
+                VALUES(
+                    ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?
+                    )
+                """,
+                (
+                    s.node, s.process, s.thread,
+                    s.location, s.timestamp, s.type, s.text,
+                    e.location, e.timestamp, e.type, e.text,
+                )
             )
     fp.close()
 
     _lb.update("Indexing data...")
 
-    c.execute("CREATE INDEX IF NOT EXISTS ts_idx ON cbtv_events(start, end)")
-    c.execute("CREATE INDEX IF NOT EXISTS ty_idx ON cbtv_events(type)")
+    c.execute("CREATE INDEX IF NOT EXISTS tt_idx ON cbtv_events(start_time, end_time)")
+    c.execute("CREATE INDEX IF NOT EXISTS tst_idx ON cbtv_events(start_type)")
+    c.execute("CREATE INDEX IF NOT EXISTS tet_idx ON cbtv_events(end_type)")
     c.close()
     db.commit()
 
@@ -192,7 +243,11 @@ class _App:
 
         self.c = sqlite3.connect(database_file)
 
-        self.threads = [n[0] for n in self.c.execute("SELECT DISTINCT thread FROM cbtv_events ORDER BY thread")]
+        self.threads = [
+            "-".join([str(c) for c in r])
+            for r
+            in self.c.execute("SELECT DISTINCT node,process,thread FROM cbtv_events ORDER BY node,process,thread")
+        ]
         self.render_start = DoubleVar(master, 0)
         self.render_len = IntVar(master, 10)
         self.scale = IntVar(master, 1000)
@@ -289,24 +344,24 @@ class _App:
     def get_start(self, start_hint=1, io=None):
         if io:
             return list(self.c.execute(
-                "SELECT min(start) FROM cbtv_events WHERE start > ? AND type = ?",
+                "SELECT min(start_time) FROM cbtv_events WHERE start_time > ? AND start_type = ?",
                 [start_hint, io]
             ))[0][0]
         else:
             return list(self.c.execute(
-                "SELECT min(start) FROM cbtv_events WHERE start > ?",
+                "SELECT min(start_time) FROM cbtv_events WHERE start_time > ?",
                 [start_hint, ]
             ))[0][0]
 
     def get_end(self, end_hint=0, io=None):
         if io:
             return list(self.c.execute(
-                "SELECT max(end) FROM cbtv_events WHERE end < ? AND type = ?",
+                "SELECT max(end_time) FROM cbtv_events WHERE end_time < ? AND end_type = ?",
                 [end_hint, io]
             ))[0][0]
         else:
             return list(self.c.execute(
-                "SELECT max(end) FROM cbtv_events WHERE end < ?",
+                "SELECT max(end_time) FROM cbtv_events WHERE end_time < ?",
                 [end_hint, ]
             ))[0][0]
 
@@ -357,7 +412,7 @@ class _App:
 
         # load data
         bm_values = []
-        for ts, tx in self.c.execute("SELECT timestamp, text FROM cbtv_events WHERE type = 'BMARK' ORDER BY timestamp"):
+        for ts, tx in self.c.execute("SELECT start_time, start_text FROM cbtv_events WHERE start_type = 'BMARK' ORDER BY start_time"):
             bm_values.append(ts)
             tss = datetime.datetime.fromtimestamp(ts).strftime("%Y/%m/%d %H:%M:%S")  # .%f
             li.insert(END, "%s: %s" % (tss, tx))
@@ -399,7 +454,7 @@ class _App:
             self.canvas.xview_moveto(x_pos - new_width * width_fraction)
 
     def truncate_text(self, text, w):
-        return text[:w / self.char_w]
+        return text.split("\n")[0][:w / self.char_w]
 
     def update(self, *args):
         """
@@ -424,7 +479,10 @@ class _App:
         s = self.render_start.get() - 1
         e = self.render_start.get() + self.render_len.get() + 1
         try:
-            self.data = list(self.c.execute("SELECT * FROM cbtv_events WHERE end > ? AND start < ? ORDER BY start ASC, end DESC", (s, e)))
+            self.data = [Event(row) for row in self.c.execute(
+                "SELECT * FROM cbtv_events WHERE end_time > ? AND start_time < ? ORDER BY start_time ASC, end_time DESC",
+                (s, e)
+            )]
         except sqlite3.OperationalError:
             self.data = []
         self.render()
@@ -495,24 +553,24 @@ class _App:
         #thread_level_starts = [[], ] * len(self.threads)  # this bug is subtle and hilarious
         thread_level_ends = [[] for n in range(len(self.threads))]
 
-        for row in self.data:
-            (_start, _end, _node, _process, _thread, _io, _function, _text) = row
-            _start = float(_start)
-            _end = float(_end)
-            thread_idx = threads.index(_thread)
+        for event in self.data:
+            thread_idx = threads.index(event.thread_id())
 
-            # when the event ends, render it
-            if _io == "ENDOK" or _io == "ENDER":
-                while thread_level_ends[thread_idx] and thread_level_ends[thread_idx][-1] <= _start:
+            if event.start_type == "START":
+                while thread_level_ends[thread_idx] and thread_level_ends[thread_idx][-1] <= event.start_time:
                     thread_level_ends[thread_idx].pop()
-                thread_level_ends[thread_idx].append(_end)
-                start_px  = (_start - _rs) * _sc
-                end_px    = (_end - _rs) * _sc
+                thread_level_ends[thread_idx].append(event.end_time)
+                start_px  = (event.start_time - _rs) * _sc
+                end_px    = (event.end_time - _rs) * _sc
                 length_px = end_px - start_px
                 stack_len = len(thread_level_ends[thread_idx]) - 1
-                self.show(int(start_px), int(length_px), thread_idx, stack_len, _function, _text, _io=="ENDOK")
+                self.show(
+                    int(start_px), int(length_px),
+                    thread_idx, stack_len,
+                    event.start_location, event.start_text+"\n"+event.end_text, event.end_type=="ENDOK"
+                )
 
-            elif _io == "BMARK":
+            elif event.start_type == "BMARK":
                 pass  # render bookmark
 
     def show(self, start, length, thread, level, function, text, ok):
