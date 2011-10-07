@@ -446,7 +446,7 @@ class _App:
                 w = int(self.canvas.itemcget(t, 'width'))
                 tx = self.truncate_text(self.original_texts[t], w)
                 self.canvas.itemconfigure(t, text=tx)  # this seems slow? sure something similar was faster...
-            self.canvas.configure(scrollregion=self.canvas.bbox("grid"))
+            self.canvas.configure(scrollregion=shrink(self.canvas.bbox("grid"), 2))
         # scroll the canvas so that the mouse still points to the same place
         if e:
             _xv = self.canvas.xview()
@@ -644,6 +644,10 @@ def _center(root):
     x = (ws/2) - (w/2)
     y = (hs/2) - (h/2)
     root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+
+
+def shrink(box, n):
+    return (box[0]+n, box[1]+n, box[2]-n, box[3]-n)
 
 
 def display(database_file, geometry=None):
