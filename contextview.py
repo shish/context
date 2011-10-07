@@ -438,7 +438,10 @@ class _App:
             x_pos = left_edge + width * width_fraction
         # scale
         if n != 1:
-            self.canvas.scale(ALL, 0, 0, n, 1)
+            self.canvas.scale("event", 0, 0, n, 1)
+            for t in self.canvas.find_withtag("time_label"):
+                val = self.canvas.itemcget(t, 'text')[2:]
+                self.canvas.itemconfigure(t, text=" +%.4f" % (float(val)/n))
             for t in self.canvas.find_withtag("event_tip"):
                 self.canvas.itemconfigure(t, width=float(self.canvas.itemcget(t, 'width'))*n)  # this seems slow? sure something similar was faster...
             for t in self.canvas.find_withtag("event_label"):
@@ -464,30 +467,36 @@ class _App:
             # update() is called a couple of times during init()
             return
 
+        try:
+            s = self.render_start.get() - 1
+            e = self.render_start.get() + self.render_len.get() + 1
+        except ValueError as ve:
+            return
+
         _lb = _LoadBox(self.master, "Loading Events")
 
-        self.n = 0
-        def progress(*args):
-            try:
-                self.n = self.n + 1
-                _lb.update("Loading... (%dk opcodes)" % (self.n*10))
-                return 0
-            except Exception as e:
-                return 1  # non-zero = cancel query
-        self.c.set_progress_handler(progress, 10000)
-
-        s = self.render_start.get() - 1
-        e = self.render_start.get() + self.render_len.get() + 1
         try:
-            self.data = [Event(row) for row in self.c.execute(
-                "SELECT * FROM cbtv_events WHERE end_time > ? AND start_time < ? ORDER BY start_time ASC, end_time DESC",
-                (s, e)
-            )]
-        except sqlite3.OperationalError:
-            self.data = []
+            self.n = 0
+            def progress(*args):
+                try:
+                    self.n = self.n + 1
+                    _lb.update("Loading... (%dk opcodes)" % (self.n*10))
+                    return 0
+                except Exception as e:
+                    return 1  # non-zero = cancel query
+            self.c.set_progress_handler(progress, 10000)
 
-        self.c.set_progress_handler(None, 0)
-        _lb.destroy()
+            try:
+                self.data = [Event(row) for row in self.c.execute(
+                    "SELECT * FROM cbtv_events WHERE end_time > ? AND start_time < ? ORDER BY start_time ASC, end_time DESC",
+                    (s, e)
+                )]
+            except sqlite3.OperationalError:
+                self.data = []
+
+            self.c.set_progress_handler(None, 0)
+        finally:
+            _lb.destroy()
 
         self.render()
 
@@ -535,9 +544,9 @@ class _App:
         rl_px = int(_rl * _sc)
 
         for n in range(rs_px, rs_px+rl_px, 100):
-            label = " +%.3f" % (float(n) / _sc - _rl)
+            label = " +%.4f" % (float(n) / _sc - _rl)
             self.canvas.create_line(n-rs_px, 0, n-rs_px, 20+len(self.threads)*ROW_HEIGHT, fill="#CCC", tags="grid")
-            self.canvas.create_text(n-rs_px, 5, text=label, anchor=NW)
+            self.canvas.create_text(n-rs_px, 5, text=label, anchor=NW, tags="time_label")
 
         for n in range(0, len(self.threads)):
             self.canvas.create_line(0, 20+ROW_HEIGHT*n, rl_px, 20+ROW_HEIGHT*n, tags="grid")
@@ -603,11 +612,11 @@ class _App:
         r = self.canvas.create_rectangle(
             start,        20+thread*ROW_HEIGHT+level*BLOCK_HEIGHT,
             start+length, 20+thread*ROW_HEIGHT+level*BLOCK_HEIGHT+BLOCK_HEIGHT,
-            fill=fill, outline=outl,
+            fill=fill, outline=outl, tags="event",
         )
         t = self.canvas.create_text(
             start, 20+thread*ROW_HEIGHT+level*BLOCK_HEIGHT+3,
-            text=self.truncate_text(text, length), tags="event_label", anchor=NW, width=length,
+            text=self.truncate_text(text, length), tags="event event_label", anchor=NW, width=length,
             font="TkFixedFont",
             state="disabled",
         )
@@ -619,11 +628,11 @@ class _App:
         r2 = self.canvas.create_rectangle(
             start,                  20+thread*ROW_HEIGHT+level*BLOCK_HEIGHT+BLOCK_HEIGHT+2,
             start+max(length, 200), 20+thread*ROW_HEIGHT+level*BLOCK_HEIGHT+BLOCK_HEIGHT*6+2,
-            state="hidden", fill="#FFA", outline="#AA8"
+            state="hidden", fill="#FFA", outline="#AA8", tags="event"
         )
         t2 = self.canvas.create_text(
             start+2, 20+thread*ROW_HEIGHT+level*BLOCK_HEIGHT+BLOCK_HEIGHT+2,
-            text=tip, width=max(length, 200), tags="event_tip", anchor=NW,
+            text=tip, width=max(length, 200), tags="event event_tip", anchor=NW,
             justify="left", state="hidden",
         )
 
