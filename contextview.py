@@ -485,11 +485,13 @@ class _App:
             )]
         except sqlite3.OperationalError:
             self.data = []
-        self.render()
 
         self.c.set_progress_handler(None, 0)
-
         _lb.destroy()
+
+        self.render()
+
+
 
     def render(self, *args):
         """
@@ -545,6 +547,11 @@ class _App:
         """
         add the event rectangles
         """
+        if not self.window_ready:
+            # update() is called a couple of times during init()
+            return
+
+        _lb = _LoadBox(self.master, "Rendering")
         _rs = self.render_start.get()
         _rl = self.render_len.get()
         _sc = self.scale.get()
@@ -553,7 +560,11 @@ class _App:
         #thread_level_starts = [[], ] * len(self.threads)  # this bug is subtle and hilarious
         thread_level_ends = [[] for n in range(len(self.threads))]
 
-        for event in self.data:
+        event_count = len(self.data)
+        for n, event in enumerate(self.data):
+            if n % 100 == 0:
+                _lb.update("Rendered %d events (%d%%)" % (n, float(n)*100/event_count))
+                self.master.update()
             thread_idx = threads.index(event.thread_id())
 
             if event.start_type == "START":
@@ -567,13 +578,22 @@ class _App:
                 self.show(
                     int(start_px), int(length_px),
                     thread_idx, stack_len,
-                    event.start_location, event.start_text+"\n"+event.end_text, event.end_type=="ENDOK"
+                    event
                 )
 
             elif event.start_type == "BMARK":
                 pass  # render bookmark
 
-    def show(self, start, length, thread, level, function, text, ok):
+        _lb.destroy()
+
+    def show(self, start, length, thread, level, event):
+        function = event.start_location
+        if event.start_text == event.end_text:
+            text = event.start_text
+        else:
+            text = event.start_text+"\n"+event.end_text
+        ok = event.end_type=="ENDOK"
+
         text = " " + text
         _time_mult = float(self.scale.get()) / 1000.0
         tip = "%dms @%dms: %s\n%s" % (float(length) / _time_mult, float(start) / _time_mult, function, text)
