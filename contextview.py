@@ -235,6 +235,8 @@ class _App:
         self.window_ready = False
         self.data = []
 
+        self.master.title(NAME+": "+database_file)
+
         try:
             os.makedirs(os.path.expanduser(os.path.join("~", ".config")))
         except OSError as e:
