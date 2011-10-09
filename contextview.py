@@ -170,7 +170,7 @@ class _LoadBox:
         else:
             self.root = Tk()
         if os.name == "nt":
-            self.root.wm_iconbitmap(default="images/boomtools.ico")
+            self.root.wm_iconbitmap(default=_res("images/boomtools.ico"))
         self.root.title(title)
         self.label = Label(self.root, text=title, width=30, anchor=CENTER)
         self.label.pack(padx=5, pady=5)
@@ -261,10 +261,10 @@ class _App:
         self.render_len.trace_variable("w", self.update)
         self.scale.trace_variable("w", self.render)
 
-        self.img_start = PhotoImage(file="images/start.gif")
-        self.img_prev = PhotoImage(file="images/prev.gif")
-        self.img_next = PhotoImage(file="images/next.gif")
-        self.img_end = PhotoImage(file="images/end.gif")
+        self.img_start = PhotoImage(file=_res("images/start.gif"))
+        self.img_prev = PhotoImage(file=_res("images/prev.gif"))
+        self.img_next = PhotoImage(file=_res("images/next.gif"))
+        self.img_end = PhotoImage(file=_res("images/end.gif"))
 
         self.h = Scrollbar(master, orient=HORIZONTAL)
         self.v = Scrollbar(master, orient=VERTICAL)
@@ -677,6 +677,18 @@ def _center(root):
     root.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
 
+def _res(path):
+    ideas = [
+        os.path.join(os.path.dirname(sys.argv[0]), path),
+        os.path.join(os.environ.get("_MEIPASS2", "/"), path),
+        path,
+    ]
+    for p in ideas:
+        if os.path.exists(p):
+            return p
+    return None
+
+
 def shrink(box, n):
     return (box[0]+n, box[1]+n, box[2]-n, box[3]-n)
 
@@ -690,7 +702,7 @@ def display(database_file, geometry=None):
     # by default, showerror() will create a random blank window as root
     root = Tk()
     if os.name == "nt":
-        root.wm_iconbitmap(default="images/boomtools.ico")
+        root.wm_iconbitmap(default=_res("images/boomtools.ico"))
     root.title(NAME)
 
     if not os.path.exists(database_file):
