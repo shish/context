@@ -98,7 +98,7 @@ def compile_log(log_file, database_file, append=False):
         if n % 1000 == 0:
             _lb.update("Imported %d events (%d%%)" % (n, fp.tell()*100.0/f_size))
 
-        e = LogEvent(line)
+        e = LogEvent(line.decode("utf-8"))
 
         thread_name = e.thread_id()
         if thread_name not in thread_names:
