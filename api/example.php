@@ -6,19 +6,19 @@ function hello() {
 	ctx_log_start("saying hello");
 	printf("hello ");
 	sleep(1);
-	ctx_log_endok("saying hello");
+	ctx_log_endok();
 }
 
-function world() {
-	ctx_log_start("saying world");
-	printf("world\n");
+function greet($name) {
+	ctx_log_start("greeting $name");
+	printf("$name\n");
 	sleep(2);
-	ctx_log_endok("saying world");
+	ctx_log_endok();
 }
 
 ctx_set_log("output.php.ctxt");
-ctx_log_start("running program");
+ctx_log_start("running program", true);
 hello();
-world();
-ctx_log_endok("running program");
+greet("world");
+ctx_log_endok();
 ?>

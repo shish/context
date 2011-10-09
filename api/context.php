@@ -1,9 +1,4 @@
 <?php
-define("CTX_BMARK", "BMARK");
-define("CTX_START", "START");
-define("CTX_ENDOK", "ENDOK");
-define("CTX_ENDER", "ENDER");
-
 $_context_log = null;
 
 function ctx_set_log($name) {
@@ -40,8 +35,28 @@ function __get_func() {
 	return $p['function'];
 }
 
-function ctx_log_bmark($text) {ctx_log_msg(__get_func(), $text, "BMARK");}
-function ctx_log_start($text) {ctx_log_msg(__get_func(), $text, "START");}
-function ctx_log_endok($text) {ctx_log_msg(__get_func(), $text, "ENDOK");}
-function ctx_log_ender($text) {ctx_log_msg(__get_func(), $text, "ENDER");}
+function ctx_log_bmark($text=null) {ctx_log_msg(__get_func(), $text, "BMARK");}
+function ctx_log_clear($text=null) {ctx_log_msg(__get_func(), $text, "CLEAR");}
+
+function ctx_log_start($text=null, $bookmark=false, $clear=false) {
+	if($clear) {
+		ctx_log_msg(__get_func(), $text, "CLEAR");
+	}
+	if($bookmark) {
+		ctx_log_msg(__get_func(), $text, "BMARK");
+	}
+	ctx_log_msg(__get_func(), $text, "START");
+}
+function ctx_log_endok($text=null, $clear=false) {
+	ctx_log_msg(__get_func(), $text, "ENDOK");
+	if($clear) {
+		ctx_log_msg(__get_func(), $text, "ENDER");
+	}
+}
+function ctx_log_ender($text=null, $clear=false) {
+	ctx_log_msg(__get_func(), $text, "ENDER");
+	if($clear) {
+		ctx_log_msg(__get_func(), $text, "ENDER");
+	}
+}
 ?>
