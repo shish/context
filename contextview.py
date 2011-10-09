@@ -47,7 +47,7 @@ class LogEvent:
         (self.timestamp, self.node, self.process, self.thread, self.type, self.location, self.text) = parts
 
     def thread_id(self):
-        return "%s-%s-%s" % (self.node, self.process, self.thread)
+        return "%s %s %s" % (self.node, self.process, self.thread)
 
     def event_str(self):
         return "%s %s:%s" % (self.location, self.type, self.text)
@@ -59,15 +59,13 @@ class LogEvent:
 class Event:
     def __init__(self, row):
         (
-            self.node, self.process, self.thread,
+            self.thread_id,
             self.start_location, self.end_location,
             self.start_time, self.end_time,
             self.start_type, self.end_type,
             self.start_text, self.end_text,
         ) = row
-
-    def thread_id(self):
-        return "%s-%s-%s" % (self.node, self.process, self.thread)
+        #self.node, self.process, self.thread,
 
 
 def compile_log(log_file, database_file, append=False):
@@ -79,12 +77,20 @@ def compile_log(log_file, database_file, append=False):
     c = db.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS cbtv_events(
-            node varchar(32) not null, process integer not null, thread varchar(32) not null,
+            thread_id integer not null,
             start_location text not null,   end_location text,
             start_time float not null,      end_time float,
             start_type char(5) not null,    end_type char(5),
             start_text text,                end_text text
-        )
+        );
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS cbtv_threads(
+            id integer not null,
+            node varchar(32) not null,
+            process integer not null,
+            thread varchar(32) not null
+        );
     """)
 
     thread_names = []
@@ -114,11 +120,11 @@ def compile_log(log_file, database_file, append=False):
                     start_location, start_time, start_type, start_text
                 )
                 VALUES(
-                    ?, ?, ?,
+                    ?,
                     ?, ?, ?, ?
                 )
                 """,
-                (e.node, e.process, e.thread, e.location, e.timestamp, e.type, e.text)
+                (thread_id, e.location, e.timestamp, e.type, e.text)
             )
 
         if e.type == "START":
@@ -129,23 +135,30 @@ def compile_log(log_file, database_file, append=False):
             c.execute(
                 """
                 INSERT INTO cbtv_events(
-                    node, process, thread,
+                    thread_id,
                     start_location, start_time, start_type, start_text,
                     end_location, end_time, end_type, end_text
                     )
                 VALUES(
-                    ?, ?, ?,
+                    ?,
                     ?, ?, ?, ?,
                     ?, ?, ?, ?
                     )
                 """,
                 (
-                    s.node, s.process, s.thread,
+                    thread_id,
                     s.location, s.timestamp, s.type, s.text,
                     e.location, e.timestamp, e.type, e.text,
                 )
             )
     fp.close()
+
+    for idx, thr in enumerate(thread_names):
+        (node, process, thread) = thr.split()
+        c.execute("""
+            INSERT INTO cbtv_threads(id, node, process, thread)
+            VALUES(?, ?, ?, ?)
+        """, (idx, node, process, thread))
 
     _lb.update("Indexing data...")
 
@@ -248,7 +261,7 @@ class _App:
         self.threads = [
             "-".join([str(c) for c in r])
             for r
-            in self.c.execute("SELECT DISTINCT node,process,thread FROM cbtv_events ORDER BY node,process,thread")
+            in self.c.execute("SELECT node, process, thread FROM cbtv_threads ORDER BY id")
         ]
         self.render_start = DoubleVar(master, 0)
         self.render_len = IntVar(master, 10)
@@ -502,8 +515,6 @@ class _App:
 
         self.render()
 
-
-
     def render(self, *args):
         """
         Render settings changed, re-render with existing data
@@ -576,7 +587,7 @@ class _App:
             if n % 100 == 0:
                 _lb.update("Rendered %d events (%d%%)" % (n, float(n)*100/event_count))
                 self.master.update()
-            thread_idx = threads.index(event.thread_id())
+            thread_idx = event.thread_id
 
             if event.start_type == "START":
                 while thread_level_ends[thread_idx] and thread_level_ends[thread_idx][-1] <= event.start_time:
