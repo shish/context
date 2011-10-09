@@ -725,6 +725,7 @@ def main(argv):
     (options, args) = parser.parse_args(argv)
 
     # lol constants
+    global ROW_HEIGHT
     ROW_HEIGHT=options.row_height
 
     if len(args) > 1:
