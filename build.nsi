@@ -1,4 +1,5 @@
 !system 'build.sh'
+!include "file_assoc.nsh"
 !include "ctx_ver.nsh"
 
 ; !include "MUI2.nsh"
@@ -32,6 +33,9 @@ section
 	setOutPath $INSTDIR
 	file "dist\context.exe"
 
+	${registerExtension} "$INSTDIR\context.exe" ".ctxt" "Context Text"
+	${registerExtension} "$INSTDIR\context.exe" ".cbin" "Context Binary"
+
 	createShortCut "$SMPROGRAMS\Context.lnk" "$INSTDIR\context.exe"
 	WriteRegStr HKCU "Software\Context" "" $INSTDIR
 	writeUninstaller $INSTDIR\uninstaller.exe
@@ -40,6 +44,9 @@ sectionEnd
 section "Uninstall"
 	delete $INSTDIR\uninstaller.exe
 	delete "$SMPROGRAMS\Context.lnk"
+
+	${unregisterExtension} ".cbin" "Context Binary"
+	${unregisterExtension} ".ctxt" "Context Text"
 
 	delete $INSTDIR\context.exe
 	rmdir /r $INSTDIR\docs
