@@ -115,14 +115,8 @@ def compile_log(log_file, database_file, append=False):
         if e.type == "BMARK":
             c.execute(
                 """
-                INSERT INTO cbtv_events(
-                    node, process, thread,
-                    start_location, start_time, start_type, start_text
-                )
-                VALUES(
-                    ?,
-                    ?, ?, ?, ?
-                )
+                INSERT INTO cbtv_events(thread_id, start_location, start_time, start_type, start_text)
+                VALUES(?, ?, ?, ?, ?)
                 """,
                 (thread_id, e.location, e.timestamp, e.type, e.text)
             )
@@ -138,12 +132,12 @@ def compile_log(log_file, database_file, append=False):
                     thread_id,
                     start_location, start_time, start_type, start_text,
                     end_location, end_time, end_type, end_text
-                    )
+                )
                 VALUES(
                     ?,
                     ?, ?, ?, ?,
                     ?, ?, ?, ?
-                    )
+                )
                 """,
                 (
                     thread_id,
@@ -162,9 +156,7 @@ def compile_log(log_file, database_file, append=False):
 
     _lb.update("Indexing data...")
 
-    c.execute("CREATE INDEX IF NOT EXISTS tt_idx ON cbtv_events(start_time, end_time)")
-    c.execute("CREATE INDEX IF NOT EXISTS tst_idx ON cbtv_events(start_type)")
-    c.execute("CREATE INDEX IF NOT EXISTS tet_idx ON cbtv_events(end_type)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_start_type_time ON cbtv_events(start_type, start_time)")  # searching for bookmarks
     c.close()
     db.commit()
 
@@ -258,6 +250,7 @@ class _App:
 
         self.c = sqlite3.connect(database_file)
 
+        # fast because the data is split off into a tiny table
         self.threads = [
             "-".join([str(c) for c in r])
             for r
@@ -324,7 +317,7 @@ class _App:
         self.master.update()
 
         self.window_ready = True
-        self.render_start.set(self.get_start(0))
+        self.render_start.set(self.get_earliest_bookmark_after(0))
 
     def load_settings(self):
         try:
@@ -356,50 +349,38 @@ class _App:
     # Navigation
     #########################################################################
 
-    def get_start(self, start_hint=1, io=None):
-        if io:
-            return list(self.c.execute(
-                "SELECT min(start_time) FROM cbtv_events WHERE start_time > ? AND start_type = ?",
-                [start_hint, io]
-            ))[0][0]
-        else:
-            return list(self.c.execute(
-                "SELECT min(start_time) FROM cbtv_events WHERE start_time > ?",
-                [start_hint, ]
-            ))[0][0]
+    def get_earliest_bookmark_after(self, start_hint=0):
+        return list(self.c.execute(
+            "SELECT min(start_time) FROM cbtv_events WHERE start_time > ? AND start_type = 'BMARK'",
+            [start_hint, ]
+        ))[0][0]
 
-    def get_end(self, end_hint=0, io=None):
-        if io:
-            return list(self.c.execute(
-                "SELECT max(end_time) FROM cbtv_events WHERE end_time < ? AND end_type = ?",
-                [end_hint, io]
-            ))[0][0]
-        else:
-            return list(self.c.execute(
-                "SELECT max(end_time) FROM cbtv_events WHERE end_time < ?",
-                [end_hint, ]
-            ))[0][0]
+    def get_latest_bookmark_before(self, end_hint=0):
+        return list(self.c.execute(
+            "SELECT max(start_time) FROM cbtv_events WHERE start_time < ? AND start_type = 'BMARK'",
+            [end_hint, ]
+        ))[0][0]
 
     def end_event(self):
-        next_ts = self.get_end(sys.maxint, "BMARK")
+        next_ts = self.get_latest_bookmark_before(sys.maxint)
         if next_ts:
             self.render_start.set(next_ts)
         self.canvas.xview_moveto(0)
 
     def next_event(self):
-        next_ts = self.get_start(self.render_start.get(), "BMARK")
+        next_ts = self.get_earliest_bookmark_after(self.render_start.get())
         if next_ts:
             self.render_start.set(next_ts)
         self.canvas.xview_moveto(0)
 
     def prev_event(self):
-        prev_ts = self.get_end(self.render_start.get(), "BMARK")
+        prev_ts = self.get_latest_bookmark_before(self.render_start.get())
         if prev_ts:
             self.render_start.set(prev_ts)
         self.canvas.xview_moveto(0)
 
     def start_event(self):
-        next_ts = self.get_start(0, "BMARK")
+        next_ts = self.get_earliest_bookmark_after(0)
         if next_ts:
             self.render_start.set(next_ts)
         self.canvas.xview_moveto(0)
@@ -427,10 +408,10 @@ class _App:
 
         # load data
         bm_values = []
-        for ts, tx in self.c.execute("SELECT start_time, start_text FROM cbtv_events WHERE start_type = 'BMARK' ORDER BY start_time"):
+        for ts, tx, et in self.c.execute("SELECT start_time, start_text, end_text FROM cbtv_events WHERE start_type = 'BMARK' ORDER BY start_time"):
             bm_values.append(ts)
             tss = datetime.datetime.fromtimestamp(ts).strftime("%Y/%m/%d %H:%M:%S")  # .%f
-            li.insert(END, "%s: %s" % (tss, tx))
+            li.insert(END, "%s: %s" % (tss, tx or et))
 
         # load events
         def _lbox_selected(*args):
