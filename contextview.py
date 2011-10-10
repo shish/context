@@ -175,7 +175,7 @@ class _LoadBox:
         else:
             self.root = Tk()
         if os.name == "nt":
-            self.root.wm_iconbitmap(default="images/boomtools.ico")
+            self.root.wm_iconbitmap(default=_res("images/boomtools.ico"))
         self.root.title(title)
         self.label = Label(self.root, text=title, width=30, anchor=CENTER)
         self.label.pack(padx=5, pady=5)
@@ -210,13 +210,23 @@ class _App:
 
         def _bu(t, c):
             if isinstance(t, PhotoImage):
-                Button(f,
-                    image=t, command=c, padding=0
-                ).pack(side="right")
+                if have_ttk:
+                    Button(f,
+                        image=t, command=c, padding=0
+                    ).pack(side="right")
+                else:
+                    Button(f,
+                        image=t, command=c,
+                    ).pack(side="right")
             else:
-                Button(f,
-                    text=t, command=c, padding=0
-                ).pack(side="right", fill=Y)
+                if have_ttk:
+                    Button(f,
+                        text=t, command=c, padding=0
+                    ).pack(side="right", fill=Y)
+                else:
+                    Button(f,
+                        text=t, command=c,
+                    ).pack(side="right", fill=Y)
 
         _la("  Start ")
         _sp(0, int(time.time()), 10, self.render_start, 15)
@@ -267,10 +277,10 @@ class _App:
         self.render_len.trace_variable("w", self.update)
         self.scale.trace_variable("w", self.render)
 
-        self.img_start = PhotoImage(file="images/start.gif")
-        self.img_prev = PhotoImage(file="images/prev.gif")
-        self.img_next = PhotoImage(file="images/next.gif")
-        self.img_end = PhotoImage(file="images/end.gif")
+        self.img_start = PhotoImage(file=_res("images/start.gif"))
+        self.img_prev = PhotoImage(file=_res("images/prev.gif"))
+        self.img_next = PhotoImage(file=_res("images/next.gif"))
+        self.img_end = PhotoImage(file=_res("images/end.gif"))
 
         self.h = Scrollbar(master, orient=HORIZONTAL)
         self.v = Scrollbar(master, orient=VERTICAL)
@@ -285,7 +295,8 @@ class _App:
         self.v['command'] = self.canvas.yview
 
         self.controls = self.__control_box(master)
-        self.grip = Sizegrip(master)
+        if have_ttk:
+            self.grip = Sizegrip(master)
 
         master.grid_columnconfigure(0, weight=1)
         master.grid_rowconfigure(1, weight=1)
@@ -293,7 +304,8 @@ class _App:
         self.canvas.grid(  column=0, row=1, sticky=(N, W, E, S))
         self.v.grid(       column=1, row=1, sticky=(N, S))
         self.h.grid(       column=0, row=2, sticky=(W, E))
-        self.grip.grid(    column=1, row=2, sticky=(S, E))
+        if have_ttk:
+            self.grip.grid(    column=1, row=2, sticky=(S, E))
 
         self.canvas.bind("<4>", lambda e: self.scale_view(e, 1.0 * 1.1))
         self.canvas.bind("<5>", lambda e: self.scale_view(e, 1.0 / 1.1))
@@ -669,6 +681,18 @@ def _center(root):
     root.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
 
+def _res(path):
+    ideas = [
+        os.path.join(os.path.dirname(sys.argv[0]), path),
+        os.path.join(os.environ.get("_MEIPASS2", "/"), path),
+        path,
+    ]
+    for p in ideas:
+        if os.path.exists(p):
+            return p
+    return None
+
+
 def shrink(box, n):
     return (box[0]+n, box[1]+n, box[2]-n, box[3]-n)
 
@@ -682,7 +706,7 @@ def display(database_file, geometry=None):
     # by default, showerror() will create a random blank window as root
     root = Tk()
     if os.name == "nt":
-        root.wm_iconbitmap(default="images/boomtools.ico")
+        root.wm_iconbitmap(default=_res("images/boomtools.ico"))
     root.title(NAME)
 
     if not os.path.exists(database_file):
