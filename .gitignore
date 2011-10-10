@@ -1,7 +1,11 @@
 *.pyc
+*.class
 *.swp
+*.o
+*.log
 
-context.cdb
+*.ctxt
+*.cbin
 context.*log
 context.spec
 
