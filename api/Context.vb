@@ -27,6 +27,23 @@
         End If
     End Function
 
+    Private Shared Function compactString(ByVal o As Object) As String
+        compactString = ""
+        If o.GetType.IsArray Or o.GetType.IsAssignableFrom(GetType(IEnumerable)) Then
+            For Each oo As Object In o
+                compactString += compactString(oo)
+            Next
+        Else
+            compactString += o.ToString + " "
+        End If
+    End Function
+
+
+    Private Shared Function compactStrings(ByVal ParamArray o() As Object) As String
+        compactStrings = compactString(o)
+    End Function
+
+
     Private Shared Function genMessage(ByVal text As String, ByVal type As String) As String
         genMessage = ""
         genMessage += Format(getTime(), "0.000000") + " " ' time
@@ -62,17 +79,17 @@
         log_file = Nothing
     End Sub
 
-    Public Shared Sub start(ByVal text As String)
-        logMsg(genMessage(text, "START"))
+    Public Shared Sub start(ByVal ParamArray text() As Object)
+        logMsg(genMessage(compactStrings(text), "START"))
     End Sub
-    Public Shared Sub endok(ByVal text As String)
-        logMsg(genMessage(text, "ENDOK"))
+    Public Shared Sub endok(ByVal ParamArray text() As Object)
+        logMsg(genMessage(compactStrings(text), "ENDOK"))
     End Sub
-    Public Shared Sub ender(ByVal text As String)
-        logMsg(genMessage(text, "ENDER"))
+    Public Shared Sub ender(ByVal ParamArray text() As Object)
+        logMsg(genMessage(compactStrings(text), "ENDER"))
     End Sub
-    Public Shared Sub bmark(ByVal text As String)
-        logMsg(genMessage(text, "BMARK"))
+    Public Shared Sub bmark(ByVal ParamArray text() As Object)
+        logMsg(genMessage(compactStrings(text), "BMARK"))
     End Sub
 
 End Class
