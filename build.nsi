@@ -4,7 +4,7 @@
 
 ; !include "MUI2.nsh"
 Name "Context ${VERSION}"
-Outfile context-installer-${VERSION}.exe
+Outfile context-${VERSION}-i686.exe
 Icon images\boomtools.ico
 LicenseData docs\LICENSE.txt
 
