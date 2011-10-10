@@ -205,13 +205,23 @@ class _App:
 
         def _bu(t, c):
             if isinstance(t, PhotoImage):
-                Button(f,
-                    image=t, command=c, padding=0
-                ).pack(side="right")
+                if have_ttk:
+                    Button(f,
+                        image=t, command=c, padding=0
+                    ).pack(side="right")
+                else:
+                    Button(f,
+                        image=t, command=c,
+                    ).pack(side="right")
             else:
-                Button(f,
-                    text=t, command=c, padding=0
-                ).pack(side="right", fill=Y)
+                if have_ttk:
+                    Button(f,
+                        text=t, command=c, padding=0
+                    ).pack(side="right", fill=Y)
+                else:
+                    Button(f,
+                        text=t, command=c,
+                    ).pack(side="right", fill=Y)
 
         _la("  Start ")
         _sp(0, int(time.time()), 10, self.render_start, 15)
@@ -279,7 +289,8 @@ class _App:
         self.v['command'] = self.canvas.yview
 
         self.controls = self.__control_box(master)
-        self.grip = Sizegrip(master)
+        if have_ttk:
+            self.grip = Sizegrip(master)
 
         master.grid_columnconfigure(0, weight=1)
         master.grid_rowconfigure(1, weight=1)
@@ -287,7 +298,8 @@ class _App:
         self.canvas.grid(  column=0, row=1, sticky=(N, W, E, S))
         self.v.grid(       column=1, row=1, sticky=(N, S))
         self.h.grid(       column=0, row=2, sticky=(W, E))
-        self.grip.grid(    column=1, row=2, sticky=(S, E))
+        if have_ttk:
+            self.grip.grid(    column=1, row=2, sticky=(S, E))
 
         self.canvas.bind("<4>", lambda e: self.scale_view(e, 1.0 * 1.1))
         self.canvas.bind("<5>", lambda e: self.scale_view(e, 1.0 / 1.1))
