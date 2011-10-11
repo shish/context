@@ -31,7 +31,7 @@ def log_msg(function, text, io):
         print("%f %s %d %s %s %s %s\n" % (
             time.time(),
             platform.node(), os.getpid(), tn,
-            io, function, text
+            io, function, text or ''
         ), file=_output, end='')
 
 
@@ -66,6 +66,11 @@ def log(text, bookmark=False, exceptions=True, clear=False):
 #######################################################################
 # Library Convenience
 #######################################################################
+
+def log_bmark(function, text=None):
+    """Shortcut to log some text with the bookmark type"""
+    log_msg(function, text, "BMARK")
+
 
 def log_start(function, text=None, bookmark=False, clear=False):
     """Shortcut to log some text with the event-start type"""
