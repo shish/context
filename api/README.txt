@@ -39,6 +39,8 @@ log_msg(location, text, marker)
 
 log_start(text)
     - log that an event has started
+    - some APIs add optional extra paramaters for "clear stack"
+      and "set bookmark", so you can do all three things in one call
     - shortcut to log_msg(getCurrentFunction(), text, "START")
 
 log_endok(text)

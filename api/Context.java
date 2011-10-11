@@ -98,5 +98,6 @@ class Context {
   public static void endok(Object... text) {logMsg(genMsg(compactStrings(text), "ENDOK"));}
   public static void ender(Object... text) {logMsg(genMsg(compactStrings(text), "ENDER"));}
   public static void bmark(Object... text) {logMsg(genMsg(compactStrings(text), "BMARK"));}
+  public static void clear(Object... text) {logMsg(genMsg(compactStrings(text), "CLEAR"));}
 
 }

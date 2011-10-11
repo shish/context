@@ -37,6 +37,8 @@ function __get_func() {
 
 function ctx_log_bmark($text=null) {ctx_log_msg(__get_func(), $text, "BMARK");}
 function ctx_log_clear($text=null) {ctx_log_msg(__get_func(), $text, "CLEAR");}
+function ctx_log_endok($text=null) {ctx_log_msg(__get_func(), $text, "ENDOK");}
+function ctx_log_ender($text=null) {ctx_log_msg(__get_func(), $text, "ENDER");}
 
 function ctx_log_start($text=null, $bookmark=false, $clear=false) {
 	if($clear) {
@@ -46,17 +48,5 @@ function ctx_log_start($text=null, $bookmark=false, $clear=false) {
 		ctx_log_msg(__get_func(), $text, "BMARK");
 	}
 	ctx_log_msg(__get_func(), $text, "START");
-}
-function ctx_log_endok($text=null, $clear=false) {
-	ctx_log_msg(__get_func(), $text, "ENDOK");
-	if($clear) {
-		ctx_log_msg(__get_func(), $text, "ENDER");
-	}
-}
-function ctx_log_ender($text=null, $clear=false) {
-	ctx_log_msg(__get_func(), $text, "ENDER");
-	if($clear) {
-		ctx_log_msg(__get_func(), $text, "ENDER");
-	}
 }
 ?>

@@ -91,5 +91,8 @@
     Public Shared Sub bmark(ByVal ParamArray text() As Object)
         logMsg(genMessage(compactStrings(text), "BMARK"))
     End Sub
+    Public Shared Sub clear(ByVal ParamArray text() As Object)
+        logMsg(genMessage(compactStrings(text), "CLEAR"))
+    End Sub
 
 End Class

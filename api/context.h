@@ -4,6 +4,7 @@
 #define ctx_log_start(text) ctx_log_msg(__FUNCTION__, text, "START")
 #define ctx_log_endok(text) ctx_log_msg(__FUNCTION__, text, "ENDOK")
 #define ctx_log_ender(text) ctx_log_msg(__FUNCTION__, text, "ENDER")
+#define ctx_log_clear(text) ctx_log_msg(__FUNCTION__, text, "CLEAR")
 
 extern FILE *context_log;
 

@@ -6,7 +6,7 @@ use Sys::Hostname;
 use Time::HiRes qw (gettimeofday);
 use base 'Exporter';
 our @EXPORT = ('set_log', 'log_msg', 'get_func',
-		'log_bmark', 'log_start', 'log_endok', 'log_ender');
+		'log_bmark', 'log_start', 'log_endok', 'log_ender', 'log_clear');
 
 # Global output file handler
 my $_output;
@@ -47,5 +47,8 @@ sub log_endok { my $text = shift; &log_msg(&get_func(), $text, "ENDOK"); }
 
 # Shortcut to log some text with the event-end (error) type
 sub log_ender { my $text = shift; &log_msg(&get_func(), $text, "ENDER"); }
+
+# Shortcut to log some text with the event-clear type
+sub log_clear { my $text = shift; &log_msg(&get_func(), $text, "CLEAR"); }
 
 1;

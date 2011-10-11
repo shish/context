@@ -91,6 +91,11 @@ def log_ender(function, text=None):
     log_msg(function, text, "ENDER")
 
 
+def log_clear(function, text=None):
+    """Shortcut to log some text with the event-clear type"""
+    log_msg(function, text, "CLEAR")
+
+
 #######################################################################
 # Automatic Profiling Mode
 #######################################################################
