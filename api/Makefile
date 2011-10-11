@@ -1,7 +1,8 @@
 
-test: example example.py example.php example.pl Example.class
+test: example example-decorator.py example-profiler.py example.php example.pl Example.class
 	./example
-	./example.py
+	./example-decorator.py
+	./example-profiler.py
 	./example.php
 	./example.pl
 	java Example
