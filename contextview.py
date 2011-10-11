@@ -500,7 +500,7 @@ class _App:
 
             try:
                 self.data = [Event(row) for row in self.c.execute(
-                    "SELECT * FROM cbtv_events WHERE end_time > ? AND start_time < ? ORDER BY start_time ASC, end_time DESC",
+                    "SELECT * FROM cbtv_events WHERE start_type = 'START' AND end_time > ? AND start_time < ? ORDER BY start_time ASC, end_time DESC",
                     (s, e)
                 )]
             except sqlite3.OperationalError:
@@ -601,6 +601,10 @@ class _App:
                 )
 
             elif event.start_type == "BMARK":
+                # note that when loading data, we currently filter for
+                # "start_type=START" for a massive indexed speed boost
+                # so there are no bookmarks. We may want to load bookmarks
+                # into a separate array?
                 pass  # render bookmark
 
         _lb.destroy()
