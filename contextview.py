@@ -125,7 +125,11 @@ def compile_log(log_file, database_file, append=False):
             thread_stacks[thread_id].append(e)
 
         if e.type == "ENDOK" or e.type == "ENDER":
-            s = thread_stacks[thread_id].pop()
+            try:
+                s = thread_stacks[thread_id].pop()
+            except IndexError:
+                # the log started with an END
+                continue
             c.execute(
                 """
                 INSERT INTO cbtv_events(
