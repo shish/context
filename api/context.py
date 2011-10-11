@@ -4,6 +4,7 @@ import time
 import platform
 import threading
 import os
+import sys
 
 
 #######################################################################
@@ -34,27 +35,7 @@ def log_msg(function, text, io):
         ), file=_output, end='')
 
 
-def log_bookmark(function, text=None):
-    """Shortcut to log some text with the bookmark type"""
-    log_msg(function, text, "BMARK")
-
-
-def log_start(function, text=None):
-    """Shortcut to log some text with the event-start type"""
-    log_msg(function, text, "START")
-
-
-def log_end(function, text=None):
-    """Shortcut to log some text with the event-end (success) type"""
-    log_msg(function, text, "ENDOK")
-
-
-def log_error(function, text=None):
-    """Shortcut to log some text with the event-end (error) type"""
-    log_msg(function, text, "ENDER")
-
-
-def log(text, bookmark=False, exceptions=True):
+def log(text, bookmark=False, exceptions=True, clear=False):
     """Decorator to log event-start at the start of a function
     call and event-end at the end, optionally with a bookmark
     at the start"""
@@ -65,16 +46,71 @@ def log(text, bookmark=False, exceptions=True):
         else:
             _text = text
         try:
+            if clear:
+                log_msg(function.func_name, None, "CLEAR")
             if bookmark:
-                log_bookmark(function.func_name, _text)
-            log_start(function.func_name, _text)
+                log_msg(function.func_name, _text, "START")
+            log_msg(function.func_name, _text, "START")
             d = function(*args, **kwargs)
-            log_end(function.func_name, _text)
+            log_msg(function.func_name, None, "ENDOK")
             return d
         except Exception as e:
             if exceptions:
-                log_error(function.func_name, _text)
+                log_msg(function.func_name, str(e), "ENDER")
             else:
-                log_end(function.func_name, _text)
+                log_msg(function.func_name, None, "ENDOK")
             raise
     return _log
+
+
+#######################################################################
+# Library Convenience
+#######################################################################
+
+def log_start(function, text=None, bookmark=False, clear=False):
+    """Shortcut to log some text with the event-start type"""
+    if clear:
+        log_msg(function, text, "CLEAR")
+    if bookmark:
+        log_msg(function, text, "BMARK")
+    log_msg(function, text, "START")
+
+
+def log_endok(function, text=None):
+    """Shortcut to log some text with the event-end (success) type"""
+    log_msg(function, text, "ENDOK")
+
+
+def log_ender(function, text=None):
+    """Shortcut to log some text with the event-end (error) type"""
+    log_msg(function, text, "ENDER")
+
+
+#######################################################################
+# Automatic Profiling Mode
+#######################################################################
+
+def _profile(frame, action, params):
+    if action == 'call':
+        log_msg(
+            "%s:%d" % (frame.f_code.co_filename, frame.f_code.co_firstlineno),
+            frame.f_code.co_name,
+            "START"
+        )
+    if action == 'return':
+        log_msg(
+            "%s:%d" % (frame.f_code.co_filename, frame.f_code.co_firstlineno),
+            frame.f_code.co_name,
+            "ENDOK"
+        )
+
+def set_profile(active=False):
+    if active:
+        log_msg(
+            "context.py",
+            "Profiling init",
+            "BMARK"
+        )
+        sys.setprofile(_profile)
+    else:
+        sys.setprofile(None)
