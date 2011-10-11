@@ -19,5 +19,5 @@ def main():
     function_b()
 
 if __name__ == "__main__":
-    c.set_log("output.py.ctxt")
+    c.set_log("output.decorator-py.ctxt")
     main()
