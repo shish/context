@@ -106,11 +106,8 @@ def _profile(frame, action, params):
 
 def set_profile(active=False):
     if active:
-        log_msg(
-            "context.py",
-            "Profiling init",
-            "BMARK"
-        )
+        log_start("context.py", "Profiling init", True)
         sys.setprofile(_profile)
     else:
         sys.setprofile(None)
+        log_endok("context.py", "Profiling exit")
