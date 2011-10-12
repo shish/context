@@ -25,40 +25,27 @@ static void get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int ma
 	jvmtiThreadInfo info;
 	jvmtiError      error;
 
-	/* Make sure the stack variables are garbage free */
 	(void)memset(&info,0, sizeof(info));
-
-	/* Assume the name is unknown for now */
 	(void)strcpy(tname, "Unknown");
 
-	/* Get the thread information, which includes the name */
 	error = (*jvmti)->GetThreadInfo(jvmti, thread, &info);
 	check_jvmti_error(jvmti, error, "Cannot get thread info");
 
-	/* The thread might not have a name, be careful here. */
 	if ( info.name != NULL ) {
 		int len;
 
-		/* Copy the thread name into tname if it will fit */
 		len = (int)strlen(info.name);
 		if ( len < maxlen ) {
 			(void)strcpy(tname, info.name);
 		}
 
-		/* Every string allocated by JVMTI needs to be freed */
 		error = (*jvmti)->Deallocate(jvmti, (unsigned char*)info.name);
-		if (error != JVMTI_ERROR_NONE) {
-			printf("(get_thread_name) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, error);
-			describe(error);
-			printf("\n");
-		}
 	}
 }
 
 int filter(jvmtiEnv *env, jmethodID method) {
 	jvmtiError error;
 	jclass class;
-	int match = 0;
 
 	error = (*env)->GetMethodDeclaringClass(env, method, &class);
 
@@ -66,7 +53,7 @@ int filter(jvmtiEnv *env, jmethodID method) {
 	char *generic;
 	error = (*env)->GetClassSignature(env, class, &signature, &generic);
 
-	//fprintf(_context_log, "%s   %s\n", signature, generic);
+	int match = 0;
 	if(!strncmp(signature+1, _filter, strlen(_filter))) {
 		match = 1;
 	}
@@ -133,8 +120,7 @@ jint Agent_OnLoad(JavaVM *vm, char *options, void *reserved){
 	jvmtiEventCallbacks callbacks;
 	int i;
 
-	printf("%s\n", options);
-	// noob code
+	// noob string processing
 	int commas = 0;
 	char *opt2 = NULL;
 	for(i=0; i<strlen(options); i++) {
@@ -163,7 +149,7 @@ jint Agent_OnLoad(JavaVM *vm, char *options, void *reserved){
 	(*env)->AddCapabilities(env, &capa);
 
 	(void)memset(&callbacks,0, sizeof(callbacks));	     	    
-	callbacks.MethodEntry   = &cbMethodEntry;
+	callbacks.MethodEntry  = &cbMethodEntry;
 	callbacks.MethodExit   = &cbMethodExit; 
 	error = (*env)->SetEventCallbacks(env, &callbacks, (jint)sizeof(callbacks));
 
