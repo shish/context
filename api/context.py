@@ -101,13 +101,13 @@ def log_clear(function, text=None):
 #######################################################################
 
 def _profile(frame, action, params):
-    if action == 'call':
+    if action == 'call' and log_msg:
         log_msg(
             "%s:%d" % (frame.f_code.co_filename, frame.f_code.co_firstlineno),
             frame.f_code.co_name,
             "START"
         )
-    if action == 'return':
+    if action == 'return' and log_msg:
         log_msg(
             "%s:%d" % (frame.f_code.co_filename, frame.f_code.co_firstlineno),
             frame.f_code.co_name,
