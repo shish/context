@@ -2,7 +2,7 @@
 
 import context
 
-context.set_log("output.profiler-py.ctxt")
+context.set_log("output.py-profile.ctxt")
 context.set_profile(True)
 
 BOARD_SIZE = 8
