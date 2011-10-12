@@ -480,8 +480,8 @@ class _App:
             return
 
         try:
-            s = self.render_start.get() - 1
-            e = self.render_start.get() + self.render_len.get() + 1
+            s = self.render_start.get()
+            e = self.render_start.get() + self.render_len.get()
         except ValueError as ve:
             return
 
