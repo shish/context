@@ -36,7 +36,7 @@ output.java-profile.ctxt: ExampleProfile.class libcontext.so
 # TODO: compile / run VB from the command line?
 
 clean:
-	rm -f *.o *.so *.pyc *.ctxt *.class example
+	rm -f *.o *.so *.pyc *.ctxt *.cbin *.class example
 
 libcontext.so: java-profiler.c
 	gcc -fPIC -I /usr/lib/jvm/java-6-openjdk/include/ -shared -Wl,-soname,libcontext.so.1 -o libcontext.so java-profiler.c
