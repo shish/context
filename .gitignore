@@ -12,3 +12,5 @@ context.spec
 pyinstaller-*/
 build/
 dist/
+images/*-icon.*
+!images/*-icon.svg

@@ -179,7 +179,7 @@ class _LoadBox:
         else:
             self.root = Tk()
         if os.name == "nt":
-            self.root.wm_iconbitmap(default=_res("images/boomtools.ico"))
+            self.root.wm_iconbitmap(default=_res("images/tools-icon.ico"))
         self.root.title(title)
         self.label = Label(self.root, text=title, width=30, anchor=CENTER)
         self.label.pack(padx=5, pady=5)
@@ -714,7 +714,7 @@ def display(database_file, geometry=None):
     # by default, showerror() will create a random blank window as root
     root = Tk()
     if os.name == "nt":
-        root.wm_iconbitmap(default=_res("images/boomtools.ico"))
+        root.wm_iconbitmap(default=_res("images/tools-icon.ico"))
     root.title(NAME)
 
     if not os.path.exists(database_file):
@@ -757,7 +757,7 @@ def main(argv):
     else:
         root = Tk()
         if os.name == "nt":
-            root.wm_iconbitmap(default="images/boomtools.ico")
+            root.wm_iconbitmap(default="images/tools-icon.ico")
         root.withdraw()
         root.overrideredirect(True)
         filename = askopenfilename(
