@@ -16,6 +16,7 @@ import sqlite3
 import sys
 import time
 import os
+from cbtk import *
 
 try:
     from Tkinter import *
@@ -69,7 +70,7 @@ class Event:
 
 
 def compile_log(log_file, database_file, append=False):
-    _lb = _LoadBox(None, "Importing .ctxt")
+    _lb = ProgressDialog(None, "Importing .ctxt")
 
     if not append and os.path.exists(database_file):
         os.unlink(database_file)
@@ -171,28 +172,6 @@ def compile_log(log_file, database_file, append=False):
 # GUI Out
 #######################################################################
 
-class _LoadBox:
-    def __init__(self, master, title):
-        if master:
-            self.root = Toplevel(master)
-            self.root.transient(master)
-        else:
-            self.root = Tk()
-        if os.name == "nt":
-            self.root.wm_iconbitmap(default=_res("images/tools-icon.ico"))
-        self.root.title(title)
-        self.label = Label(self.root, text=title, width=30, anchor=CENTER)
-        self.label.pack(padx=5, pady=5)
-        self.root.update()
-
-    def update(self, text):
-        self.label.configure(text=text)
-        self.root.update()
-
-    def destroy(self):
-        self.root.destroy()
-
-
 class _App:
     #########################################################################
     # GUI setup
@@ -281,10 +260,10 @@ class _App:
         self.render_len.trace_variable("w", self.update)
         self.scale.trace_variable("w", self.render)
 
-        self.img_start = PhotoImage(file=_res("images/start.gif"))
-        self.img_prev = PhotoImage(file=_res("images/prev.gif"))
-        self.img_next = PhotoImage(file=_res("images/next.gif"))
-        self.img_end = PhotoImage(file=_res("images/end.gif"))
+        self.img_start = PhotoImage(file=resource("images/start.gif"))
+        self.img_prev = PhotoImage(file=resource("images/prev.gif"))
+        self.img_next = PhotoImage(file=resource("images/next.gif"))
+        self.img_end = PhotoImage(file=resource("images/end.gif"))
 
         self.h = Scrollbar(master, orient=HORIZONTAL)
         self.v = Scrollbar(master, orient=VERTICAL)
@@ -485,7 +464,7 @@ class _App:
         except ValueError as ve:
             return
 
-        _lb = _LoadBox(self.master, "Loading Events")
+        _lb = ProgressDialog(self.master, "Loading Events")
 
         try:
             self.n = 0
@@ -570,7 +549,7 @@ class _App:
             # update() is called a couple of times during init()
             return
 
-        _lb = _LoadBox(self.master, "Rendering")
+        _lb = ProgressDialog(self.master, "Rendering")
         _rs = self.render_start.get()
         _rl = self.render_len.get()
         _sc = self.scale.get()
@@ -678,29 +657,6 @@ class _App:
         self.canvas.tag_bind(r, "<1>",     lambda e: focus())
 
 
-def _center(root):
-    root.update()
-    w = root.winfo_reqwidth()
-    h = root.winfo_reqheight()
-    ws = root.winfo_screenwidth()
-    hs = root.winfo_screenheight()
-    x = (ws/2) - (w/2)
-    y = (hs/2) - (h/2)
-    root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-
-
-def _res(path):
-    ideas = [
-        os.path.join(os.path.dirname(sys.argv[0]), path),
-        os.path.join(os.environ.get("_MEIPASS2", "/"), path),
-        path,
-    ]
-    for p in ideas:
-        if os.path.exists(p):
-            return p
-    return None
-
-
 def shrink(box, n):
     return (box[0]+n, box[1]+n, box[2]-n, box[3]-n)
 
@@ -713,8 +669,7 @@ def display(database_file, geometry=None):
     # set up the root window early, so we can control it (and hide it)
     # by default, showerror() will create a random blank window as root
     root = Tk()
-    if os.name == "nt":
-        root.wm_iconbitmap(default=_res("images/tools-icon.ico"))
+    set_icon(root, "images/tools-icon")
     root.title(NAME)
 
     if not os.path.exists(database_file):
@@ -732,7 +687,7 @@ def display(database_file, geometry=None):
         return 3
 
     #root.state("zoomed")
-    #_center(root)
+    #win_center(root)
     _App(root, database_file)
     if geometry:
         root.geometry(geometry)
@@ -756,8 +711,7 @@ def main(argv):
         filename = args[1]
     else:
         root = Tk()
-        if os.name == "nt":
-            root.wm_iconbitmap(default="images/tools-icon.ico")
+        set_icon(root, "images/tools-icon")
         root.withdraw()
         root.overrideredirect(True)
         filename = askopenfilename(
