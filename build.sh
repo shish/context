@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PATH=$PATH:/c/Python27/
+PATH=$PATH:/c/Python27/:/opt/local/bin/
 VER=`git describe`
 ARCH=`uname -m`
 
