@@ -19,7 +19,7 @@ def set_log(fn):
     set the filename of the telemetry log
     """
     global _output
-    _output = open(fn, "a", 1)
+    _output = open(fn, "w", 1)
 
 
 def log_msg(function, text, io):
@@ -49,7 +49,7 @@ def log(text, bookmark=False, exceptions=True, clear=False):
             if clear:
                 log_msg(function.func_name, None, "CLEAR")
             if bookmark:
-                log_msg(function.func_name, _text, "START")
+                log_msg(function.func_name, _text, "BMARK")
             log_msg(function.func_name, _text, "START")
             d = function(*args, **kwargs)
             log_msg(function.func_name, None, "ENDOK")
@@ -67,12 +67,12 @@ def log(text, bookmark=False, exceptions=True, clear=False):
 # Library Convenience
 #######################################################################
 
-def log_bmark(function, text=None):
+def log_bmark(text=None, function="-"):
     """Shortcut to log some text with the bookmark type"""
     log_msg(function, text, "BMARK")
 
 
-def log_start(function, text=None, bookmark=False, clear=False):
+def log_start(text=None, function="-", bookmark=False, clear=False):
     """Shortcut to log some text with the event-start type"""
     if clear:
         log_msg(function, text, "CLEAR")
@@ -81,17 +81,17 @@ def log_start(function, text=None, bookmark=False, clear=False):
     log_msg(function, text, "START")
 
 
-def log_endok(function, text=None):
+def log_endok(text=None, function="-"):
     """Shortcut to log some text with the event-end (success) type"""
     log_msg(function, text, "ENDOK")
 
 
-def log_ender(function, text=None):
+def log_ender(text=None, function="-"):
     """Shortcut to log some text with the event-end (error) type"""
     log_msg(function, text, "ENDER")
 
 
-def log_clear(function, text=None):
+def log_clear(text=None, function="-"):
     """Shortcut to log some text with the event-clear type"""
     log_msg(function, text, "CLEAR")
 
@@ -116,8 +116,8 @@ def _profile(frame, action, params):
 
 def set_profile(active=False):
     if active:
-        log_start("context.py", "Profiling init", True)
+        log_start("Profiling init", True)
         sys.setprofile(_profile)
     else:
         sys.setprofile(None)
-        log_endok("context.py", "Profiling exit")
+        log_endok("Profiling exit")
