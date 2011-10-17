@@ -37,6 +37,10 @@ except ImportError:
 NAME = "Context"
 ROW_HEIGHT = 140
 BLOCK_HEIGHT = 20
+MIN_PPS = 1
+MAX_PPS = 5000
+MIN_SEC = 1
+MAX_SEC = 60
 
 
 #######################################################################
@@ -221,9 +225,9 @@ class _App:
         _la("  Start ")
         _sp(0, int(time.time()), 10, self.render_start, 15)
         _la("  Seconds ")
-        _sp(1, 60, 1, self.render_len, 3)
+        _sp(MIN_SEC, MAX_SEC, 1, self.render_len, 3)
         _la("  Pixels per second ")
-        _sp(50, 5000, 100, self.scale, 5)
+        _sp(MIN_PPS, MAX_PPS, 100, self.scale, 5)
 
         _bu(self.img_end, self.end_event)
         _bu(self.img_next, self.next_event)
@@ -503,7 +507,7 @@ class _App:
         """
         Render settings changed, re-render with existing data
         """
-        if self.scale.get() < 50:
+        if not MIN_PPS < self.scale.get() < MAX_PPS:
             return
         self.render_clear()
         self.render_base()
