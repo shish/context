@@ -16,6 +16,7 @@ import sqlite3
 import sys
 import time
 import os
+import context as ctx
 from cbtk import *
 
 try:
@@ -69,6 +70,7 @@ class Event:
         #self.node, self.process, self.thread,
 
 
+@ctx.log("Importing .ctxt", bookmark=True)
 def compile_log(log_file, database_file, append=False):
     _lb = ProgressDialog(None, "Importing .ctxt")
 
@@ -97,6 +99,7 @@ def compile_log(log_file, database_file, append=False):
     thread_names = []
     thread_stacks = []
 
+    ctx.log_start("Compiling log")
     fp = open(log_file)
     fp.seek(0, 2)
     f_size = fp.tell()
@@ -151,7 +154,9 @@ def compile_log(log_file, database_file, append=False):
                 )
             )
     fp.close()
+    ctx.log_endok()
 
+    ctx.log_start("Indexing data")
     for idx, thr in enumerate(thread_names):
         (node, process, thread) = thr.split()
         c.execute("""
@@ -162,6 +167,8 @@ def compile_log(log_file, database_file, append=False):
     _lb.update("Indexing data...")
 
     c.execute("CREATE INDEX IF NOT EXISTS idx_start_type_time ON cbtv_events(start_type, start_time)")  # searching for bookmarks
+    ctx.log_endok()
+
     c.close()
     db.commit()
 
@@ -491,6 +498,7 @@ class _App:
 
         self.render()
 
+    @ctx.log("Rendering data", bookmark=True)
     def render(self, *args):
         """
         Render settings changed, re-render with existing data
@@ -501,6 +509,7 @@ class _App:
         self.render_base()
         self.render_data()
 
+    @ctx.log("Cleaning old data")
     def render_clear(self):
         """
         clear the canvas and any cached variables
@@ -521,6 +530,7 @@ class _App:
             self.char_w = bb[2] - bb[0] - 2
             self.canvas.delete(t)
 
+    @ctx.log("Rendering base grid")
     def render_base(self):
         """
         Render grid lines and markers
@@ -541,6 +551,7 @@ class _App:
             self.canvas.create_line(0, 20+ROW_HEIGHT*n, rl_px, 20+ROW_HEIGHT*n, tags="grid")
             self.canvas.create_text(0, 20+ROW_HEIGHT*(n+1)-5, text=" "+self.threads[n], anchor=SW)
 
+    @ctx.log("Rendering events")
     def render_data(self):
         """
         add the event rectangles
@@ -701,11 +712,16 @@ def main(argv):
             help="location and size of window", metavar="GM")
     parser.add_option("-r", "--row-height", dest="row_height", default=140,
             type=int, help="height of the rows", metavar="PX")
+    parser.add_option("-c", "--context", dest="context", default=None,
+            help="use context to profile itself", metavar="FILE")
     (options, args) = parser.parse_args(argv)
 
     # lol constants
     global ROW_HEIGHT
     ROW_HEIGHT=options.row_height
+
+    if options.context:
+        ctx.set_log(options.context)
 
     if len(args) > 1:
         filename = args[1]
