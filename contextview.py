@@ -716,8 +716,8 @@ def main(argv):
             help="location and size of window", metavar="GM")
     parser.add_option("-r", "--row-height", dest="row_height", default=140,
             type=int, help="height of the rows", metavar="PX")
-    parser.add_option("-c", "--context", dest="context", default=None,
-            help="use context to profile itself", metavar="FILE")
+    parser.add_option("-c", "--context", dest="context", default=False, action="store_true",
+            help="use context to profile itself")
     (options, args) = parser.parse_args(argv)
 
     # lol constants
@@ -725,7 +725,7 @@ def main(argv):
     ROW_HEIGHT=options.row_height
 
     if options.context:
-        ctx.set_log(options.context)
+        ctx.set_log("context.ctxt")
 
     if len(args) > 1:
         filename = args[1]
