@@ -1,10 +1,8 @@
 #!/bin/bash
 
 PATH=$PATH:/c/Python27/:/opt/local/bin/
-VER=`git describe`
+VERSION=`git describe`
 ARCH=`uname -m`
-echo "VERSION='$VER'" > ctx_ver.py
-echo "!define VERSION '${VER}'" > ctx_ver.nsh
 
 if [ "`uname -s`" = "Darwin" ] ; then
 	export VERSIONER_PYTHON_PREFER_32_BIT=yes
@@ -28,22 +26,27 @@ function svg2icons() {
 	fi
 }
 
-svg2icons tools-icon
-svg2icons context-icon
+function build() {
+	VER=$1
+	echo "VERSION='$VER'" > ctx_ver.py
+	echo "!define VERSION '${VER}'" > ctx_ver.nsh
 
-$PYTHON ../pyinstaller-1.5.1/pyinstaller.py --tk --onefile --windowed --upx $ICON context
+	$PYTHON ../pyinstaller-1.5.1/pyinstaller.py --tk --onefile --windowed --upx $ICON context
 
-if [ "`uname -s`" = "Linux" ] || [ "`uname -s`" = "Darwin" ] ; then
-	rm -rf context-$VER
-	mkdir context-$VER
-	cp -rv api context-$VER/
-	cp -rv docs context-$VER/
 	if [ "`uname -s`" = "Linux" ] ; then
+		rm -rf context-$VER
+		mkdir context-$VER
+		cp -rv api context-$VER/
+		cp -rv docs context-$VER/
 		cp dist/* context-$VER/
 		cp -rv images context-$VER/
 		tar cvzf context-$VER-$ARCH.tgz --exclude "*.pyc" context-$VER
 	fi
 	if [ "`uname -s`" = "Darwin" ] ; then
+		rm -rf context-$VER
+		mkdir context-$VER
+		cp -rv api context-$VER/
+		cp -rv docs context-$VER/
 		cp -rv dist/context.app context-$VER/
 		CONTENTS=context-$VER/context.app/Contents/
 		cp images/context-icon.icns $CONTENTS/Resources/App.icns
@@ -60,4 +63,9 @@ if [ "`uname -s`" = "Linux" ] || [ "`uname -s`" = "Darwin" ] ; then
 		# auto-extract to desktop
 		#hdiutil internet-enable -yes context-$VER-$ARCH.dmg
 	fi
-fi
+}
+
+svg2icons tools-icon
+svg2icons context-icon
+build $VERSION
+build $VERSION-demo
