@@ -463,7 +463,7 @@ class _App:
             self.render_len.set(cp.getint("gui", "render_len"))
             self.scale.set(cp.getint("gui", "scale"))
             self.render_0ms.set(cp.getint("gui", "render_0ms"))
-            self.render_0ms.set(cp.getint("gui", "render_auto"))
+            self.render_auto.set(cp.getint("gui", "render_auto"))
             #self._file_opts['initialdir'] = cp.get("gui", "last-log-dir")
         except Exception as e:
             print("Error loading settings from %s:\n  %s" % (self.config_file, e))
