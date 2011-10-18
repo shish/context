@@ -206,8 +206,8 @@ class _App:
 
         def view_menu():
             viewmenu = Menu(menubar, tearoff=0)
-            viewmenu.add_command(label="Show 0ms events", command=None)
-            viewmenu.add_command(label="Auto-render", command=None)
+            viewmenu.add_checkbutton(label="Show 0ms events", variable=self.render_0ms)
+            viewmenu.add_checkbutton(label="Auto-render", command=None)
             viewmenu.add_command(label="Filter threads", command=None)
             return viewmenu
         menubar.add_cascade(label="View", menu=view_menu())
@@ -343,12 +343,14 @@ class _App:
         self.render_start = DoubleVar(master, 0)
         self.render_len = IntVar(master, 10)
         self.scale = IntVar(master, 1000)
+        self.render_0ms = IntVar(master, 1)
 
         self.load_settings()
         master.protocol("WM_DELETE_WINDOW", self.save_settings_and_quit)
 
         self.render_start.trace_variable("w", self.update)
         self.render_len.trace_variable("w", self.update)
+        self.render_0ms.trace_variable("w", self.update)
         self.scale.trace_variable("w", self.render)
 
         self.img_start = PhotoImage(file=resource("images/start.gif"))
@@ -453,6 +455,7 @@ class _App:
             cp.readfp(file(self.config_file))
             self.render_len.set(cp.getint("gui", "render_len"))
             self.scale.set(cp.getint("gui", "scale"))
+            self.render_0ms.set(cp.getint("gui", "render_0ms"))
             #self._file_opts['initialdir'] = cp.get("gui", "last-log-dir")
         except Exception as e:
             print("Error loading settings from %s:\n  %s" % (self.config_file, e))
@@ -463,6 +466,7 @@ class _App:
             cp.add_section("gui")
             cp.set("gui", "render_len", str(self.render_len.get()))
             cp.set("gui", "scale", str(self.scale.get()))
+            cp.set("gui", "render_0ms", str(self.render_0ms.get()))
             #cp.set("gui", "last-log-dir", self._file_opts['initialdir'])
             cp.write(file(self.config_file, "w"))
         except Exception as e:
@@ -689,6 +693,7 @@ class _App:
         _lb = ProgressDialog(self.master, "Rendering")
         _rs = self.render_start.get()
         _rl = self.render_len.get()
+        _r0 = self.render_0ms.get()
         _sc = self.scale.get()
 
         threads = self.threads
@@ -710,6 +715,9 @@ class _App:
                 end_px    = (event.end_time - _rs) * _sc
                 length_px = end_px - start_px
                 stack_len = len(thread_level_ends[thread_idx]) - 1
+                print((event.end_time - event.start_time) * 1000)
+                if render_0ms == 0 and (event.end_time - event.start_time) * 1000 < 1:
+                    continue
                 self.show(
                     int(start_px), int(length_px),
                     thread_idx, stack_len,
