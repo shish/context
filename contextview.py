@@ -79,8 +79,8 @@ class Event:
 
 
 @ctx.log("Importing .ctxt", bookmark=True)
-def compile_log(log_file, database_file, append=False):
-    _lb = ProgressDialog(None, "Importing .ctxt")
+def compile_log(log_file, database_file, master=None, append=False):
+    _lb = ProgressDialog(master, "Importing .ctxt")
 
     if not append and os.path.exists(database_file):
         os.unlink(database_file)
@@ -104,7 +104,7 @@ def compile_log(log_file, database_file, append=False):
         );
     """)
 
-    thread_names = []
+    thread_names = list(c.execute("SELECT node, process, thread FROM cbtv_threads ORDER BY id"))
     thread_stacks = []
 
     ctx.log_start("Compiling log")
@@ -165,6 +165,7 @@ def compile_log(log_file, database_file, append=False):
     ctx.log_endok()
 
     ctx.log_start("Indexing data")
+    c.execute("DELETE FROM cbtv_threads")
     for idx, thr in enumerate(thread_names):
         (node, process, thread) = thr.split()
         c.execute("""
