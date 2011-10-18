@@ -65,6 +65,8 @@ function build() {
 	fi
 }
 
+rsvg -w 256 images/context-name.svg images/context-name.png
+convert -background white -bordercolor white -border 15x5 images/context-name.png images/context-name.gif
 svg2icons tools-icon
 svg2icons context-icon
 build $VERSION
