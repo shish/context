@@ -47,6 +47,11 @@ MIN_SEC = 1
 MAX_SEC = 60
 
 
+def conditional(v, f):
+    if v.get() == 1:
+        f()
+
+
 #######################################################################
 # Application API
 #######################################################################
@@ -207,7 +212,7 @@ class _App:
         def view_menu():
             viewmenu = Menu(menubar, tearoff=0)
             viewmenu.add_checkbutton(label="Show 0ms events", variable=self.render_0ms)
-            viewmenu.add_checkbutton(label="Auto-render", command=None)
+            viewmenu.add_checkbutton(label="Auto-render", variable=self.render_auto)
             viewmenu.add_command(label="Filter threads", command=None)
             return viewmenu
         menubar.add_cascade(label="View", menu=view_menu())
@@ -317,6 +322,7 @@ class _App:
         _sp(MIN_SEC, MAX_SEC, 1, self.render_len, 3)
         _la("  Pixels per second ")
         _sp(MIN_PPS, MAX_PPS, 100, self.scale, 5)
+        Button(f, text="Render", command=self.update, padding=0).pack(side=LEFT)
 
         _bu(self.img_end, self.end_event)
         _bu(self.img_next, self.next_event)
@@ -342,16 +348,17 @@ class _App:
         self.threads = []
         self.render_start = DoubleVar(master, 0)
         self.render_len = IntVar(master, 10)
-        self.scale = IntVar(master, 1000)
         self.render_0ms = IntVar(master, 1)
+        self.render_auto = IntVar(master, 1)
+        self.scale = IntVar(master, 1000)
 
         self.load_settings()
         master.protocol("WM_DELETE_WINDOW", self.save_settings_and_quit)
 
-        self.render_start.trace_variable("w", self.update)
-        self.render_len.trace_variable("w", self.update)
-        self.render_0ms.trace_variable("w", self.update)
-        self.scale.trace_variable("w", self.render)
+        self.render_start.trace_variable("w", lambda *x: conditional(self.render_auto, self.update))
+        self.render_len.trace_variable("w", lambda *x: conditional(self.render_auto, self.update))
+        self.render_0ms.trace_variable("w", lambda *x: conditional(self.render_auto, self.render))
+        self.scale.trace_variable("w", lambda *x: conditional(self.render_auto, self.render))
 
         self.img_start = PhotoImage(file=resource("images/start.gif"))
         self.img_prev = PhotoImage(file=resource("images/prev.gif"))
@@ -456,6 +463,7 @@ class _App:
             self.render_len.set(cp.getint("gui", "render_len"))
             self.scale.set(cp.getint("gui", "scale"))
             self.render_0ms.set(cp.getint("gui", "render_0ms"))
+            self.render_0ms.set(cp.getint("gui", "render_auto"))
             #self._file_opts['initialdir'] = cp.get("gui", "last-log-dir")
         except Exception as e:
             print("Error loading settings from %s:\n  %s" % (self.config_file, e))
@@ -467,6 +475,7 @@ class _App:
             cp.set("gui", "render_len", str(self.render_len.get()))
             cp.set("gui", "scale", str(self.scale.get()))
             cp.set("gui", "render_0ms", str(self.render_0ms.get()))
+            cp.set("gui", "render_auto", str(self.render_auto.get()))
             #cp.set("gui", "last-log-dir", self._file_opts['initialdir'])
             cp.write(file(self.config_file, "w"))
         except Exception as e:
@@ -587,7 +596,7 @@ class _App:
     def truncate_text(self, text, w):
         return text.split("\n")[0][:w / self.char_w]
 
-    def update(self, *args):
+    def update(self):
         """
         Data settings changed, get new data and re-render
         """
@@ -629,7 +638,7 @@ class _App:
         self.render()
 
     @ctx.log("Rendering data", bookmark=True)
-    def render(self, *args):
+    def render(self):
         """
         Render settings changed, re-render with existing data
         """
@@ -715,8 +724,7 @@ class _App:
                 end_px    = (event.end_time - _rs) * _sc
                 length_px = end_px - start_px
                 stack_len = len(thread_level_ends[thread_idx]) - 1
-                print((event.end_time - event.start_time) * 1000)
-                if render_0ms == 0 and (event.end_time - event.start_time) * 1000 < 1:
+                if _r0 == 0 and (event.end_time - event.start_time) * 1000 < 1:
                     continue
                 self.show(
                     int(start_px), int(length_px),
