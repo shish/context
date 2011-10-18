@@ -33,6 +33,10 @@ try:
 except ImportError:
     have_ttk = False
 
+try:
+    from ctx_ver import VERSION
+except ImportError as ie:
+    VERSION = "v0.0.0-demo"
 
 NAME = "Context"
 ROW_HEIGHT = 140
