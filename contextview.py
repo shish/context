@@ -213,7 +213,7 @@ class _App:
             viewmenu = Menu(menubar, tearoff=0)
             viewmenu.add_checkbutton(label="Show 0ms events", variable=self.render_0ms)
             viewmenu.add_checkbutton(label="Auto-render", variable=self.render_auto)
-            viewmenu.add_command(label="Filter threads", command=None)
+            #viewmenu.add_command(label="Filter threads", command=None)
             return viewmenu
         menubar.add_cascade(label="View", menu=view_menu())
 
@@ -223,7 +223,7 @@ class _App:
             analysemenu = Menu(menubar, tearoff=0)
             analysemenu.add_command(label="Time Chart", command=timechart)
             return analysemenu
-        menubar.add_cascade(label="Analyse", menu=analyse_menu())
+        #menubar.add_cascade(label="Analyse", menu=analyse_menu())
 
         def help_menu():
             def show_about():
