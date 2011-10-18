@@ -11,4 +11,7 @@ tutorial / example, check the website at
 
   - http://www.boomtools.co.uk/context
 
+Pre-written libraries for various languages are in an "api" folder wherever
+Context was installed.
+
 If you need any help, contact developers@boomtools.co.uk
