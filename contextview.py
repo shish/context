@@ -192,6 +192,90 @@ class _App:
     #########################################################################
     # GUI setup
     #########################################################################
+    def __menu(self, master):
+        menubar = Menu(master)
+
+        def file_menu():
+            filemenu = Menu(menubar, tearoff=0)
+            filemenu.add_command(label="Open ctxt / cbin", command=self.open_file)
+            #filemenu.add_command(label="Append ctxt", command=self.append_file)
+            filemenu.add_separator()
+            filemenu.add_command(label="Exit", command=self.save_settings_and_quit)
+            return filemenu
+        menubar.add_cascade(label="File", menu=file_menu())
+
+        def view_menu():
+            viewmenu = Menu(menubar, tearoff=0)
+            viewmenu.add_command(label="Show 0ms events", command=None)
+            viewmenu.add_command(label="Auto-render", command=None)
+            viewmenu.add_command(label="Filter threads", command=None)
+            return viewmenu
+        menubar.add_cascade(label="View", menu=view_menu())
+
+        def analyse_menu():
+            def timechart():
+                _TimeChart(master, self.output.get("0.0", END))
+            analysemenu = Menu(menubar, tearoff=0)
+            analysemenu.add_command(label="Time Chart", command=timechart)
+            return analysemenu
+        menubar.add_cascade(label="Analyse", menu=analyse_menu())
+
+        def help_menu():
+            def show_about():
+                t = Toplevel(master)
+                t.title("About")
+                t.transient(master)
+                t.resizable(False, False)
+                Label(t, image=self.img_logo).grid(column=0, row=0, sticky=(E, W))
+                Label(t, text="Context %s" % VERSION, anchor=CENTER).grid(column=0, row=1, sticky=(E, W))
+                Label(t, text="(c) 2011 Indiconews Ltd", anchor=CENTER).grid(column=0, row=2, sticky=(E, W))
+                Button(t, text="Close", command=t.destroy).grid(column=0, row=3, sticky=(E, ))
+                win_center(t)
+
+            def show_docs():
+                t = Toplevel(master)
+                t.title("Context Documentation")
+                t.transient(master)
+                scroll = Scrollbar(t, orient=VERTICAL)
+                tx = Text(
+                    t,
+                    wrap=WORD,
+                    yscrollcommand=scroll.set,
+                )
+                scroll['command'] = tx.yview
+                scroll.pack(side=RIGHT, fill=Y, expand=1)
+                tx.pack(fill=BOTH, expand=1)
+                tx.insert("0.0", file(resource("docs/README.txt")).read().replace("\r", ""))
+                tx.configure(state="disabled")
+                tx.focus_set()
+                win_center(t)
+
+            def show_license():
+                t = Toplevel(master)
+                t.title("Context Licenses")
+                t.transient(master)
+                scroll = Scrollbar(t, orient=VERTICAL)
+                tx = Text(
+                    t,
+                    wrap=WORD,
+                    yscrollcommand=scroll.set,
+                )
+                scroll['command'] = tx.yview
+                scroll.pack(side=RIGHT, fill=Y, expand=1)
+                tx.pack(fill=BOTH, expand=1)
+                tx.insert("0.0", file(resource("docs/LICENSE.txt")).read().replace("\r", ""))
+                tx.configure(state="disabled")
+                tx.focus_set()
+                win_center(t)
+
+            helpmenu = Menu(menubar, tearoff=0)
+            helpmenu.add_command(label="About", command=show_about)
+            helpmenu.add_command(label="Documentation", command=show_docs)
+            helpmenu.add_command(label="License", command=show_license)
+            return helpmenu
+        menubar.add_cascade(label="Help", menu=help_menu())
+
+        master.config(menu=menubar)
 
     def __control_box(self, master):
         f = Frame(master)
@@ -249,22 +333,13 @@ class _App:
         self.window_ready = False
         self.data = []
 
-        self.master.title(NAME+": "+database_file)
-
         try:
             os.makedirs(os.path.expanduser(os.path.join("~", ".config")))
         except OSError as e:
             pass
         self.config_file = os.path.expanduser(os.path.join("~", ".config", "context.cfg"))
 
-        self.c = sqlite3.connect(database_file)
-
-        # fast because the data is split off into a tiny table
-        self.threads = [
-            "-".join([str(c) for c in r])
-            for r
-            in self.c.execute("SELECT node, process, thread FROM cbtv_threads ORDER BY id")
-        ]
+        self.threads = []
         self.render_start = DoubleVar(master, 0)
         self.render_len = IntVar(master, 10)
         self.scale = IntVar(master, 1000)
@@ -280,6 +355,7 @@ class _App:
         self.img_prev = PhotoImage(file=resource("images/prev.gif"))
         self.img_next = PhotoImage(file=resource("images/next.gif"))
         self.img_end = PhotoImage(file=resource("images/end.gif"))
+        self.img_logo = PhotoImage(file=resource("images/context-name.gif"))
 
         self.h = Scrollbar(master, orient=HORIZONTAL)
         self.v = Scrollbar(master, orient=VERTICAL)
@@ -294,6 +370,7 @@ class _App:
         self.v['command'] = self.canvas.yview
 
         self.controls = self.__control_box(master)
+        self.menu = self.__menu(master)
         if have_ttk:
             self.grip = Sizegrip(master)
 
@@ -328,6 +405,46 @@ class _App:
         self.master.update()
 
         self.window_ready = True
+
+        if database_file:
+            self.load_file(database_file)
+
+    def open_file(self):
+        filename = askopenfilename(
+            filetypes = [("All Supported Types", "*.ctxt *.cbin"), ("Context Text", "*.ctxt"), ("Context Binary", "*.cbin")],
+        )
+        if filename:
+            self.load_file(filename)
+
+    def load_file(self, filename):
+        if not os.path.exists(filename):
+            showerror("Error", "Context dump file '%s' does not exist" % filename)
+            return
+
+        path, ext = os.path.splitext(filename)
+        if ext == ".ctxt":
+            compile_log(path+".ctxt", path+".cbin", self.master)
+            ext = ".cbin"
+
+        database_file = path + ext
+
+        self.c = sqlite3.connect(database_file)
+
+        try:
+            self.c.execute("SELECT * FROM cbtv_events LIMIT 1")
+        except sqlite3.OperationalError as e:
+            showerror("Error", "'%s' is not a valid context dump" % database_file, parent=self.master)
+            return
+
+        # fast because the data is split off into a tiny table
+        self.threads = [
+            "-".join([str(c) for c in r])
+            for r
+            in self.c.execute("SELECT node, process, thread FROM cbtv_threads ORDER BY id")
+        ]
+
+        self.master.title(NAME+": "+database_file)
+
         self.render_start.set(self.get_earliest_bookmark_after(0))
 
     def load_settings(self):
@@ -681,41 +798,9 @@ def shrink(box, n):
     return (box[0]+n, box[1]+n, box[2]-n, box[3]-n)
 
 
-def display(database_file, geometry=None):
-    if not have_tk:
-        print("Couldn't find Tk libraries")
-        return 1
-
-    # set up the root window early, so we can control it (and hide it)
-    # by default, showerror() will create a random blank window as root
-    root = Tk()
-    set_icon(root, "images/tools-icon")
-    root.title(NAME)
-
-    if not os.path.exists(database_file):
-        root.withdraw()
-        root.overrideredirect(True)
-        showerror("Error", "Context dump file '%s' does not exist" % database_file)
-        return 2
-
-    try:
-        sqlite3.connect(database_file).execute("SELECT * FROM cbtv_events LIMIT 1")
-    except sqlite3.OperationalError as e:
-        root.withdraw()
-        root.overrideredirect(True)
-        showerror("Error", "'%s' is not a valid context dump" % database_file, parent=None)
-        return 3
-
-    #root.state("zoomed")
-    #win_center(root)
-    _App(root, database_file)
-    if geometry:
-        root.geometry(geometry)
-    root.mainloop()
-    return 0
-
-
 def main(argv):
+    filename = None
+
     parser = OptionParser()
     parser.add_option("-g", "--geometry", dest="geometry",
             help="location and size of window", metavar="GM")
@@ -734,25 +819,23 @@ def main(argv):
 
     if len(args) > 1:
         filename = args[1]
-    else:
-        root = Tk()
-        set_icon(root, "images/tools-icon")
-        root.withdraw()
-        root.overrideredirect(True)
-        filename = askopenfilename(
-            filetypes = [("All Supported Types", "*.ctxt *.cbin"), ("Context Text", "*.ctxt"), ("Context Binary", "*.cbin")],
-        )
-        root.destroy()
-        if not filename:
-            return 1
 
-    path, ext = os.path.splitext(filename)
-    if ext == ".ctxt":
-        compile_log(path+".ctxt", path+".cbin")
-        ext = ".cbin"
+    if not have_tk:
+        print("Couldn't find Tk libraries")
+        return 1
 
-    if ext == ".cbin":
-        display(path+ext, options.geometry)
+    # set up the root window early, so we can control it (and hide it)
+    # by default, showerror() will create a random blank window as root
+    root = Tk()
+    set_icon(root, "images/tools-icon")
+    root.title(NAME)
+
+    _App(root, filename)
+    if options.geometry:
+        root.geometry(options.geometry)
+    root.mainloop()
+
+    return 0
 
 
 if __name__ == "__main__":
