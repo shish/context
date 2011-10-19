@@ -46,6 +46,9 @@ MAX_PPS = 5000
 MIN_SEC = 1
 MAX_SEC = 60
 
+if VERSION.endswith("-demo"):
+    NAME = NAME + ": Non-commercial / Evaluation Version"
+
 
 def conditional(v, f):
     if v.get() == 1:
