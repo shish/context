@@ -16,7 +16,6 @@ import sqlite3
 import sys
 import time
 import os
-import context as ctx
 from cbtk import *
 
 try:
@@ -37,6 +36,16 @@ try:
     from ctx_ver import VERSION
 except ImportError as ie:
     VERSION = "v0.0.0-demo"
+
+try:
+    import context as ctx
+except ImportError as ie:
+    class ctx:
+        @staticmethod
+        def set_log(f): pass
+        log_start = log_end = set_log
+        @staticmethod
+        def log(f, *args, **kwargs): return lambda f: f
 
 NAME = "Context"
 ROW_HEIGHT = 140
