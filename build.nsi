@@ -1,4 +1,3 @@
-!system 'build.sh'
 !include "file_assoc.nsh"
 !include "ctx_ver.nsh"
 
