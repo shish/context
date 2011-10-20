@@ -55,6 +55,7 @@ def resource(path):
     ideas = [
         os.path.join(os.path.dirname(sys.argv[0]), path),
         os.path.join(os.environ.get("_MEIPASS2", "/"), path),
+        os.path.join("..", "..", "..", path),
         path,
     ]
     for p in ideas:
