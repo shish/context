@@ -667,6 +667,7 @@ class _App:
         """
         self.canvas.delete(ALL)
         self.original_texts = {}
+        self.tooltips = {}
         self.canvas.configure(scrollregion=(
             0, 0,
             self.render_len.get() * self.scale.get(),
@@ -781,45 +782,53 @@ class _App:
         self.canvas.tag_raise(r)
         self.canvas.tag_raise(t)
 
+        self.canvas.tag_bind(r, "<1>",     lambda e: self._focus(r))
+
         self.original_texts[t] = text
+        self.tooltips[r] = tip
+
+        self.canvas.tag_bind(r, "<Enter>", lambda e: self._ttip_show(r))
+        self.canvas.tag_bind(r, "<Leave>", lambda e: self._ttip_hide())
+
+    def _focus(self, r):
+        # scale the canvas so that the (selected item width + padding == screen width)
+        canvas_w = self.canvas.bbox("grid")[2]
+        view_w = self.canvas.winfo_width()
+        rect_x = self.canvas.bbox(r)[0]
+        rect_w = max(self.canvas.bbox(r)[2] - self.canvas.bbox(r)[0] + 20, 10)
+        self.scale_view(n=float(view_w)/rect_w)
+
+        # move the view so that the selected (item x1 = left edge of screen + padding)
+        canvas_w = self.canvas.bbox("grid")[2]
+        rect_x = self.canvas.bbox(r)[0] - 5
+        self.canvas.xview_moveto(float(rect_x)/canvas_w)
+
+    def _ttip_show(self, r):
+        tip = self.tooltips[r]
+
+        x0, y0, x1, y1 = self.canvas.bbox(r)
+
+        if x0 < 0:
+            x1 = x1 - x0
+            x0 = x0 - x0
+
+        t2 = self.canvas.create_text(
+            x0+4, y0+BLOCK_HEIGHT+4,
+            text=tip.strip(), width=200, tags="tooltip", anchor=NW,
+            justify="left", state="disabled",
+        )
+
+        x0, y0, x1, y1 = self.canvas.bbox(t2)
 
         r2 = self.canvas.create_rectangle(
-            start,                  20+thread*ROW_HEIGHT+level*BLOCK_HEIGHT+BLOCK_HEIGHT+2,
-            start+max(length, 200), 20+thread*ROW_HEIGHT+level*BLOCK_HEIGHT+BLOCK_HEIGHT*6+2,
-            state="hidden", fill="#FFA", outline="#AA8", tags="event"
-        )
-        t2 = self.canvas.create_text(
-            start+2, 20+thread*ROW_HEIGHT+level*BLOCK_HEIGHT+BLOCK_HEIGHT+2,
-            text=tip, width=max(length, 200), tags="event event_tip", anchor=NW,
-            justify="left", state="hidden",
+            x0-2, y0-1, x1+2, y1+2,
+            state="disabled", fill="#FFA", outline="#AA8", tags="tooltip"
         )
 
-        def ttip_show():
-            self.canvas.itemconfigure(r2, state="disabled")
-            self.canvas.itemconfigure(t2, state="disabled")
-            self.canvas.tag_raise(r2)
-            self.canvas.tag_raise(t2)
+        self.canvas.tag_raise(t2)
 
-        def ttip_hide():
-            self.canvas.itemconfigure(r2, state="hidden")
-            self.canvas.itemconfigure(t2, state="hidden")
-
-        def focus():
-            # scale the canvas so that the (selected item width + padding == screen width)
-            canvas_w = self.canvas.bbox("grid")[2]
-            view_w = self.canvas.winfo_width()
-            rect_x = self.canvas.bbox(r)[0]
-            rect_w = max(self.canvas.bbox(r)[2] - self.canvas.bbox(r)[0] + 20, 10)
-            self.scale_view(n=float(view_w)/rect_w)
-
-            # move the view so that the selected (item x1 = left edge of screen + padding)
-            canvas_w = self.canvas.bbox("grid")[2]
-            rect_x = self.canvas.bbox(r)[0] - 5
-            self.canvas.xview_moveto(float(rect_x)/canvas_w)
-
-        self.canvas.tag_bind(r, "<Enter>", lambda e: ttip_show())
-        self.canvas.tag_bind(r, "<Leave>", lambda e: ttip_hide())
-        self.canvas.tag_bind(r, "<1>",     lambda e: focus())
+    def _ttip_hide(self):
+        self.canvas.delete("tooltip")
 
 
 def shrink(box, n):
