@@ -348,6 +348,7 @@ class _App:
     def __init__(self, master, database_file):
         self.master = master
         self.char_w = -1
+        self.softscale = 1.0
         self.window_ready = False
         self.data = []
 
@@ -587,6 +588,7 @@ class _App:
             x_pos = left_edge + width * width_fraction
         # scale
         if n != 1:
+            self.softscale = self.softscale * n
             self.canvas.scale("event", 0, 0, n, 1)
             for t in self.canvas.find_withtag("time_label"):
                 val = self.canvas.itemcget(t, 'text')[2:]
@@ -598,6 +600,8 @@ class _App:
                 w = int(self.canvas.itemcget(t, 'width'))
                 tx = self.truncate_text(self.original_texts[t], w)
                 self.canvas.itemconfigure(t, text=tx)  # this seems slow? sure something similar was faster...
+            self.canvas.delete("grid")
+            self.render_base()
             self.canvas.configure(scrollregion=shrink(self.canvas.bbox("grid"), 2))
         # scroll the canvas so that the mouse still points to the same place
         if e:
@@ -689,7 +693,7 @@ class _App:
         """
         _rs = self.render_start.get()
         _rl = self.render_len.get()
-        _sc = self.scale.get()
+        _sc = self.scale.get() * self.softscale
 
         rs_px = int(_rl * _sc)
         rl_px = int(_rl * _sc)
@@ -697,11 +701,13 @@ class _App:
         for n in range(rs_px, rs_px+rl_px, 100):
             label = " +%.4f" % (float(n) / _sc - _rl)
             self.canvas.create_line(n-rs_px, 0, n-rs_px, 20+len(self.threads)*ROW_HEIGHT, fill="#CCC", tags="grid")
-            self.canvas.create_text(n-rs_px, 5, text=label, anchor=NW, tags="time_label")
+            self.canvas.create_text(n-rs_px, 5, text=label, anchor=NW, tags="time_label grid")
 
         for n in range(0, len(self.threads)):
             self.canvas.create_line(0, 20+ROW_HEIGHT*n, rl_px, 20+ROW_HEIGHT*n, tags="grid")
-            self.canvas.create_text(0, 20+ROW_HEIGHT*(n+1)-5, text=" "+self.threads[n], anchor=SW)
+            self.canvas.create_text(0, 20+ROW_HEIGHT*(n+1)-5, text=" "+self.threads[n], anchor=SW, tags="grid")
+
+        self.canvas.tag_lower("grid")
 
     @ctx.log("Rendering events")
     def render_data(self):
