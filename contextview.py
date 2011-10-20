@@ -660,6 +660,7 @@ class _App:
         """
         if not MIN_PPS < self.scale.get() < MAX_PPS:
             return
+        self.softscale = 1.0
         self.render_clear()
         self.render_base()
         self.render_data()
