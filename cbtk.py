@@ -50,7 +50,6 @@ def win_center(root):
     y = (hs/2) - (h/2)
     root.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
-
 def resource(path):
     ideas = [
         os.path.join(os.path.dirname(sys.argv[0]), path),
