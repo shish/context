@@ -723,6 +723,7 @@ class _App:
         thread_level_ends = [[] for n in range(len(self.threads))]
 
         event_count = len(self.data)
+        shown = 0
         for n, event in enumerate(self.data):
             if n % 100 == 0:
                 _lb.update("Rendered %d events (%d%%)" % (n, float(n)*100/event_count))
@@ -739,6 +740,10 @@ class _App:
                 stack_len = len(thread_level_ends[thread_idx]) - 1
                 if _r0 == 0 and (event.end_time - event.start_time) * 1000 < 1:
                     continue
+                shown = shown + 1
+                if shown == 500 and VERSION.endswith("-demo"):
+                    showerror("Demo Limit", "The evaluation build is limited to showing 500 events at a time, so rendering has stopped")
+                    break
                 self.show(
                     int(start_px), int(length_px),
                     thread_idx, stack_len,
