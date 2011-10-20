@@ -22,8 +22,7 @@ class ProgressDialog:
             self.root.transient(master)
         else:
             self.root = Tk()
-        if os.name == "nt":
-            self.root.wm_iconbitmap(default=_res("images/tools-icon.ico"))
+            set_icon(self.root, "images/tools-icon")
         self.root.title(title)
         self.label = Label(self.root, text=title, width=30, anchor=CENTER)
         self.label.pack(padx=5, pady=5)
