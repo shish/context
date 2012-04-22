@@ -93,6 +93,7 @@ class LogEvent:
 class Event:
     def __init__(self, row):
         (
+            self.id,
             self.thread_id,
             self.start_location, self.end_location,
             self.start_time, self.end_time,
@@ -112,6 +113,7 @@ def compile_log(log_file, database_file, master=None, append=False):
     c = db.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS cbtv_events(
+            id integer primary key,
             thread_id integer not null,
             start_location text not null,   end_location text,
             start_time float not null,      end_time float,
@@ -136,6 +138,7 @@ def compile_log(log_file, database_file, master=None, append=False):
     fp.seek(0, 2)
     f_size = fp.tell()
     fp.seek(0, 0)
+    first_event_start = 0
     for n, line in enumerate(fp):
         if n % 1000 == 0:
             _lb.update("Imported %d events (%d%%)" % (n, fp.tell()*100.0/f_size))
@@ -147,6 +150,9 @@ def compile_log(log_file, database_file, master=None, append=False):
             thread_names.append(thread_name)
             thread_stacks.append([])
         thread_id = thread_names.index(thread_name)
+
+        if first_event_start == 0:
+            first_event_start = e.timestamp
 
         if e.type == "BMARK":
             c.execute(
@@ -197,9 +203,21 @@ def compile_log(log_file, database_file, master=None, append=False):
             VALUES(?, ?, ?, ?)
         """, (idx, node, process, thread))
 
-    _lb.update("Indexing data...")
+    _lb.update("Indexing bookmarks...")
 
     c.execute("CREATE INDEX IF NOT EXISTS idx_start_type_time ON cbtv_events(start_type, start_time)")  # searching for bookmarks
+
+    _lb.update("Indexing events...")
+
+    c.execute("CREATE VIRTUAL TABLE cbtv_events_index USING rtree(id, start_time, end_time)")
+    c.execute("INSERT INTO cbtv_events_index SELECT id, start_time-?, end_time-? FROM cbtv_events WHERE start_time IS NOT NULL AND end_time IS NOT NULL", (first_event_start, first_event_start))
+    #c2 = db.cursor()
+    #for row in c.execute("SELECT * FROM cbtv_events WHERE start_time IS NOT NULL AND end_time IS NOT NULL"):
+    #    e = Event(row)
+    #    print(type(e.id), type(e.start_time), type(e.end_time))
+    #    c2.execute("INSERT INTO cbtv_events_index VALUES (?, ?, ?)", (e.id, e.start_time, e.end_time))
+    #c2.close()
+
     ctx.log_endok()
 
     c.close()
@@ -605,14 +623,15 @@ class _App:
     # Rendering
     #########################################################################
 
-    def _count_events_at(self, n):
+    def _count_events_at(self, n, m, offset):
         try:
             # FIXME: rather than sampling at point n, we should sample the range n <-> n+1
-            print("Looking for events at", n)
-            return self.c.execute(
-                "SELECT count(*) FROM cbtv_events WHERE start_time < ? AND end_time > ?",
-                (n, n)
+            count = self.c.execute(
+                "SELECT count(*) FROM cbtv_events_index WHERE start_time < ? AND end_time > ?",
+                (n-offset, m-offset)
             ).fetchone()[0]
+            #print("Found", count ,"events at", n)
+            return count
         except sqlite3.OperationalError:
             return 0
 
@@ -713,10 +732,15 @@ class _App:
             def task():
                 if self._scrubber_data_point >= len(self.sc_activity):
                     return
-                self.sc_activity[self._scrubber_data_point] = self._count_events_at(ev_s + (ev_l * float(self._scrubber_data_point)/len(self.sc_activity)))
+                self.sc_activity[self._scrubber_data_point] = self._count_events_at(
+                    ev_s + (ev_l * float(self._scrubber_data_point)/len(self.sc_activity)),
+                    ev_s + (ev_l * float(self._scrubber_data_point)/len(self.sc_activity)),
+                    ev_s
+                )
                 self._scrubber_data_point = self._scrubber_data_point + 1
-                if self._scrubber_data_point % 10 == 0:
-                    self.render_scrubber_activity()
+                if self._scrubber_data_point % 50 == 0:
+                    self.render_scrubber_activity(self._scrubber_data_point)
+                    self.render_scrubber_arrow()
                 self.master.after(10, task)
             task()
 
@@ -757,7 +781,7 @@ class _App:
             self.canvas.delete(t)
 
     @ctx.log("Rendering scrubber activity")
-    def render_scrubber_activity(self):
+    def render_scrubber_activity(self, length=None):
         sc = self.scrubber
 
         if not sc:
@@ -768,7 +792,7 @@ class _App:
             activity_peak = max(self.sc_activity)
             if activity_peak == 0:
                 return
-            for n in range(0, len(self.sc_activity)):
+            for n in range(0, length or len(self.sc_activity)):
                 sc.create_line(
                     n, 1,
                     n, 20,
