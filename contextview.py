@@ -64,6 +64,13 @@ def conditional(v, f):
         f()
 
 
+_colours = [(n, 255-n, 0) for n in range(0, 255+1)]
+
+def gen_colour(p0, pN):
+    idx = int(float(p0)/float(pN)*255)
+    return "#%02X%02X%02X" % _colours[min(idx, len(_colours))]
+
+
 #######################################################################
 # Application API
 #######################################################################
@@ -345,12 +352,30 @@ class _App:
         f.pack()
         return f
 
+    def __scrubber(self, master):
+        sc = Canvas(
+            master,
+            width=800, height=20,
+            background="white",
+        )
+        def sc_goto(e):
+            width_fraction = float(e.x) / sc.winfo_width()
+            ev_s = self.get_earliest_bookmark_after(0)
+            ev_e = self.get_latest_bookmark_before(sys.maxint)
+            ev_l = ev_e - ev_s
+            self.render_start.set(ev_s + ev_l * width_fraction - float(self.render_len.get()) / 2)
+            self.canvas.xview_moveto(0.5)
+        sc.bind("<1>", sc_goto)
+        return sc
+
     def __init__(self, master, database_file):
         self.master = master
         self.char_w = -1
         self.softscale = 1.0
         self.window_ready = False
         self.data = []
+        self.scrubber = None # render is called before init finished?
+        self.sc_activity = None
 
         try:
             os.makedirs(os.path.expanduser(os.path.join("~", ".config")))
@@ -395,6 +420,7 @@ class _App:
         self.menu = self.__menu(master)
         if have_ttk:
             self.grip = Sizegrip(master)
+        self.scrubber = self.__scrubber(master)
 
         master.grid_columnconfigure(0, weight=1)
         master.grid_rowconfigure(1, weight=1)
@@ -404,6 +430,7 @@ class _App:
         self.h.grid(       column=0, row=2, sticky=(W, E))
         if have_ttk:
             self.grip.grid(    column=1, row=2, sticky=(S, E))
+        self.scrubber.grid(column=0, row=3, sticky=(W, E), columnspan=2)
 
         self.canvas.bind("<4>", lambda e: self.scale_view(e, 1.0 * 1.1))
         self.canvas.bind("<5>", lambda e: self.scale_view(e, 1.0 / 1.1))
@@ -578,6 +605,17 @@ class _App:
     # Rendering
     #########################################################################
 
+    def _count_events_at(self, n):
+        try:
+            # FIXME: rather than sampling at point n, we should sample the range n <-> n+1
+            print("Looking for events at", n)
+            return self.c.execute(
+                "SELECT count(*) FROM cbtv_events WHERE start_time < ? AND end_time > ?",
+                (n, n)
+            ).fetchone()[0]
+        except sqlite3.OperationalError:
+            return 0
+
     def scale_view(self, e=None, n=1):
         # get the old pos
         if e:
@@ -613,6 +651,11 @@ class _App:
         return text.split("\n")[0][:w / self.char_w]
 
     def update(self):
+        self.update_events()
+        self.update_scrubber()
+        self.render()
+
+    def update_events(self):
         """
         Data settings changed, get new data and re-render
         """
@@ -651,7 +694,31 @@ class _App:
         finally:
             _lb.destroy()
 
-        self.render()
+    def update_scrubber(self):
+        sc = self.scrubber
+
+        if not sc:
+            return
+
+        # events start / end / length
+        ev_s = self.get_earliest_bookmark_after(0)
+        ev_e = self.get_latest_bookmark_before(sys.maxint)
+        ev_l = ev_e - ev_s
+
+        if self.sc_activity is None:
+            #self.sc_activity = [self._count_events_at(ev_s + (ev_l * float(n)/sc_w)) for n in range(0, sc_w)]
+            self.sc_activity = [0] * sc.winfo_width()
+
+            self._scrubber_data_point = 0
+            def task():
+                if self._scrubber_data_point >= len(self.sc_activity):
+                    return
+                self.sc_activity[self._scrubber_data_point] = self._count_events_at(ev_s + (ev_l * float(self._scrubber_data_point)/len(self.sc_activity)))
+                self._scrubber_data_point = self._scrubber_data_point + 1
+                if self._scrubber_data_point % 10 == 0:
+                    self.render_scrubber_activity()
+                self.master.after(10, task)
+            task()
 
     @ctx.log("Rendering data", bookmark=True)
     def render(self):
@@ -662,6 +729,8 @@ class _App:
             return
         self.softscale = 1.0
         self.render_clear()
+        self.render_scrubber_activity()
+        self.render_scrubber_arrow()
         self.render_base()
         self.render_data()
 
@@ -686,6 +755,101 @@ class _App:
             # hopefully 9px, so "-2" always helps?
             self.char_w = bb[2] - bb[0] - 2
             self.canvas.delete(t)
+
+    @ctx.log("Rendering scrubber activity")
+    def render_scrubber_activity(self):
+        sc = self.scrubber
+
+        if not sc:
+            return
+
+        if self.sc_activity is not None:
+            sc.delete("activity")
+            activity_peak = max(self.sc_activity)
+            if activity_peak == 0:
+                return
+            for n in range(0, len(self.sc_activity)):
+                sc.create_line(
+                    n, 1,
+                    n, 20,
+                    fill=gen_colour(self.sc_activity[n], activity_peak), tags="activity",
+                )
+
+    @ctx.log("Rendering scrubber arrow")
+    def render_scrubber_arrow(self):
+        sc = self.scrubber
+
+        if not sc:
+            return
+
+        # events start / end / length
+        ev_s = self.get_earliest_bookmark_after(0)
+        ev_e = self.get_latest_bookmark_before(sys.maxint)
+        ev_l = ev_e - ev_s
+
+        # view start / end / length
+        vi_s = self.render_start.get()
+        vi_e = self.render_start.get() + self.render_len.get()
+        vi_l = vi_e - vi_s
+
+        # scrubber width
+        sc_w = sc.winfo_width()
+
+        sc.delete("arrow")
+
+        # arrow
+        start_abs = vi_s
+        start_rel = start_abs - ev_s
+        start_fraction = start_rel / ev_l
+        start_scaled = start_fraction * sc_w
+        start = start_scaled
+
+        end_abs = vi_e
+        end_rel = end_abs - ev_s
+        end_fraction = end_rel / ev_l
+        end_scaled = end_fraction * sc_w
+        end = end_scaled
+
+        # left edge
+        sc.create_line(
+            start, 1,
+            start, 20,
+            fill="#000", tags="arrow",
+        )
+        sc.create_line(
+            start, 10,
+            start+5, 15,
+            fill="#000", tags="arrow",
+        )
+        sc.create_line(
+            start, 10,
+            start+5, 5,
+            fill="#000", tags="arrow",
+        )
+
+        # right edge
+        sc.create_line(
+            end, 1,
+            end, 20,
+            fill="#000", tags="arrow",
+        )
+        sc.create_line(
+            end, 10,
+            end-5, 15,
+            fill="#000", tags="arrow",
+        )
+        sc.create_line(
+            end, 10,
+            end-5, 5,
+            fill="#000", tags="arrow",
+        )
+
+        # join
+        sc.create_line(
+            start, 10,
+            end, 10,
+            fill="#000", tags="arrow",
+        )
 
     @ctx.log("Rendering base grid")
     def render_base(self):
