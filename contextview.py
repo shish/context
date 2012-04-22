@@ -394,6 +394,7 @@ class _App:
         self.data = []
         self.scrubber = None # render is called before init finished?
         self.sc_activity = None
+        self.event_idx_offset = 0
 
         try:
             os.makedirs(os.path.expanduser(os.path.join("~", ".config")))
@@ -510,6 +511,8 @@ class _App:
             in self.c.execute("SELECT node, process, thread FROM cbtv_threads ORDER BY id")
         ]
 
+        self.event_idx_offset = self.get_earliest_bookmark_after(0)
+
         self.master.title(NAME+": "+database_file)
 
         self.render_start.set(self.get_earliest_bookmark_after(0))
@@ -623,12 +626,11 @@ class _App:
     # Rendering
     #########################################################################
 
-    def _count_events_at(self, n, m, offset):
+    def _count_events_at(self, n, m):
         try:
-            # FIXME: rather than sampling at point n, we should sample the range n <-> n+1
             count = self.c.execute(
                 "SELECT count(*) FROM cbtv_events_index WHERE start_time < ? AND end_time > ?",
-                (n-offset, m-offset)
+                (m-self.event_idx_offset, n-self.event_idx_offset)
             ).fetchone()[0]
             #print("Found", count ,"events at", n)
             return count
@@ -703,8 +705,13 @@ class _App:
 
             try:
                 self.data = [Event(row) for row in self.c.execute(
-                    "SELECT * FROM cbtv_events WHERE start_type = 'START' AND end_time > ? AND start_time < ? ORDER BY start_time ASC, end_time DESC",
-                    (s, e)
+                    """
+                        SELECT *
+                        FROM cbtv_events
+                        WHERE id IN (SELECT id FROM cbtv_events_index WHERE end_time > ? AND start_time < ?)
+                        ORDER BY start_time ASC, end_time DESC
+                    """,
+                    (s-self.event_idx_offset, e-self.event_idx_offset)
                 )]
             except sqlite3.OperationalError:
                 self.data = []
@@ -734,8 +741,7 @@ class _App:
                     return
                 self.sc_activity[self._scrubber_data_point] = self._count_events_at(
                     ev_s + (ev_l * float(self._scrubber_data_point)/len(self.sc_activity)),
-                    ev_s + (ev_l * float(self._scrubber_data_point)/len(self.sc_activity)),
-                    ev_s
+                    ev_s + (ev_l * float(self._scrubber_data_point + 1)/len(self.sc_activity))
                 )
                 self._scrubber_data_point = self._scrubber_data_point + 1
                 if self._scrubber_data_point % 50 == 0:
