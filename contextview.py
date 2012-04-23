@@ -382,8 +382,15 @@ class _App:
             ev_e = self.get_latest_bookmark_before(sys.maxint)
             ev_l = ev_e - ev_s
             self.render_start.set(ev_s + ev_l * width_fraction - float(self.render_len.get()) / 2)
+            if not self.render_auto.get():
+                self.update()
             self.canvas.xview_moveto(0.5)
         sc.bind("<1>", sc_goto)
+        def resize(event):
+            self.render_scrubber_activity()
+            self.render_scrubber_arrow()
+            #sc.coords(line, 0, 0, event.width, event.height)
+        sc.bind("<Configure>", resize)
         return sc
 
     def __init__(self, master, database_file):
@@ -733,7 +740,7 @@ class _App:
 
         if self.sc_activity is None:
             #self.sc_activity = [self._count_events_at(ev_s + (ev_l * float(n)/sc_w)) for n in range(0, sc_w)]
-            self.sc_activity = [0] * sc.winfo_width()
+            self.sc_activity = [0] * 1000
 
             self._scrubber_data_point = 0
             def task():
@@ -799,15 +806,19 @@ class _App:
             if activity_peak == 0:
                 return
             for n in range(0, length or len(self.sc_activity)):
-                sc.create_line(
-                    n, 1,
-                    n, 20,
-                    fill=gen_colour(self.sc_activity[n], activity_peak), tags="activity",
+                col = gen_colour(self.sc_activity[n], activity_peak)
+                sc.create_rectangle(
+                    int(float(n)/len(self.sc_activity) * sc.winfo_width()), 1,
+                    int(float(n+1)/len(self.sc_activity) * sc.winfo_width()), 20,
+                    fill=col, outline=col, tags="activity",
                 )
 
     @ctx.log("Rendering scrubber arrow")
     def render_scrubber_arrow(self):
         sc = self.scrubber
+
+        if not self.window_ready:
+            return
 
         if not sc:
             return
