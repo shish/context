@@ -829,6 +829,9 @@ class _App:
         ev_s = self.get_earliest_bookmark_after(0)
         ev_e = self.get_latest_bookmark_before(sys.maxint)
         ev_l = ev_e - ev_s
+        
+        if ev_l == 0:  # only one bookmark
+            return
 
         # view start / end / length
         vi_s = self.render_start.get()
