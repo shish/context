@@ -9,9 +9,11 @@ Context on its own doesn't do much, you need to give it some data to analyse;
 to generate data, you need to get your code to log important points -- for a
 tutorial / example, check the website at 
 
-  - http://www.boomtools.co.uk/context
+  - http://code.shishnet.org/context
 
-Pre-written libraries for various languages are in an "api" folder wherever
-Context was installed.
+Pre-written libraries for various languages are in a separate APIs project
+available at
 
-If you need any help, contact developers@boomtools.co.uk
+  - https://github.com/shish/context-apis
+
+If you need any help, contact webmaster@shishnet.org
