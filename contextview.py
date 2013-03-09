@@ -269,7 +269,7 @@ class _App:
                 t.resizable(False, False)
                 Label(t, image=self.img_logo).grid(column=0, row=0, sticky=(E, W))
                 Label(t, text="Context %s" % VERSION, anchor=CENTER).grid(column=0, row=1, sticky=(E, W))
-                Label(t, text="(c) 2011 Indiconews Ltd", anchor=CENTER).grid(column=0, row=2, sticky=(E, W))
+                Label(t, text="(c) 2011-2013 Shish", anchor=CENTER).grid(column=0, row=2, sticky=(E, W))
                 Button(t, text="Close", command=t.destroy).grid(column=0, row=3, sticky=(E, ))
                 win_center(t)
 
@@ -403,6 +403,7 @@ class _App:
         self.scrubber = None # render is called before init finished?
         self.sc_activity = None
         self.event_idx_offset = 0
+        self._last_log_dir = os.path.expanduser("~/")
 
         try:
             os.makedirs(os.path.expanduser(os.path.join("~", ".config")))
@@ -488,6 +489,7 @@ class _App:
     def open_file(self):
         filename = askopenfilename(
             filetypes = [("All Supported Types", "*.ctxt *.cbin"), ("Context Text", "*.ctxt"), ("Context Binary", "*.cbin")],
+            initialdir = self._last_log_dir
         )
         if filename:
             self.load_file(filename)
@@ -496,6 +498,8 @@ class _App:
         if not os.path.exists(filename):
             showerror("Error", "Context dump file '%s' does not exist" % filename)
             return
+        
+        self._last_log_dir = os.path.dirname(filename)
 
         path, ext = os.path.splitext(filename)
         if ext == ".ctxt":
@@ -529,11 +533,17 @@ class _App:
         try:
             cp = ConfigParser.SafeConfigParser()
             cp.readfp(file(self.config_file))
-            self.render_len.set(cp.getint("gui", "render_len"))
-            self.scale.set(cp.getint("gui", "scale"))
-            self.render_cutoff.set(cp.getint("gui", "render_cutoff"))
-            self.render_auto.set(cp.getint("gui", "render_auto"))
-            #self._file_opts['initialdir'] = cp.get("gui", "last-log-dir")
+            if cp.has_section("gui"):
+                if cp.has_option("gui", "render_len"):
+                    self.render_len.set(cp.getint("gui", "render_len"))
+                if cp.has_option("gui", "scale"):
+                    self.scale.set(cp.getint("gui", "scale"))
+                if cp.has_option("gui", "render_cutoff"):
+                    self.render_cutoff.set(cp.getint("gui", "render_cutoff"))
+                if cp.has_option("gui", "render_auto"):
+                    self.render_auto.set(cp.getint("gui", "render_auto"))
+                if cp.has_option("gui", "last_log_dir"):
+                    self._last_log_dir = cp.get("gui", "last_log_dir")
         except Exception as e:
             print("Error loading settings from %s:\n  %s" % (self.config_file, e))
 
@@ -545,7 +555,7 @@ class _App:
             cp.set("gui", "scale", str(self.scale.get()))
             cp.set("gui", "render_cutoff", str(self.render_cutoff.get()))
             cp.set("gui", "render_auto", str(self.render_auto.get()))
-            #cp.set("gui", "last-log-dir", self._file_opts['initialdir'])
+            cp.set("gui", "last_log_dir", self._last_log_dir)
             cp.write(file(self.config_file, "w"))
         except Exception as e:
             print("Error writing settings to %s:\n  %s" % (self.config_file, e))
