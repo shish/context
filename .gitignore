@@ -18,3 +18,4 @@ images/*-icon.*
 !images/*-icon.svg
 images/*-name.*
 !images/*-name.svg
+/com.bat
