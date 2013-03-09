@@ -42,7 +42,7 @@ function build() {
 	if [ ! -f ../pyinstaller-2.0/pyinstaller.py ] ; then
 		git clone https://github.com/pyinstaller/pyinstaller.git ../pyinstaller-2.0
 	fi
-	$PYTHON ../pyinstaller-2.0/pyinstaller.py --onefile --log-level WARN --windowed $ICON context
+	$PYTHON ../pyinstaller-2.0/pyinstaller.py --onefile --log-level WARN --windowed $ICON --name context context/viewer/main.py
 
 	if [ "$OS" = "Linux" ] ; then
 		rm -rf context-$VER
