@@ -1,7 +1,13 @@
-from .types import Event, LogEvent
-from .util import *
+import os
+try:
+    import pysqlite2.dbapi2 as sqlite3  # need this for rtree indexing on windows
+except ImportError:
+    import sqlite3
 
-@ctx.log("Importing .ctxt", bookmark=True)
+
+from .types import LogEvent
+
+
 def compile_log(log_file, database_file, app=None, append=False):
     if not append and os.path.exists(database_file):
         os.unlink(database_file)
@@ -29,7 +35,6 @@ def compile_log(log_file, database_file, app=None, append=False):
     thread_names = list(c.execute("SELECT node, process, thread FROM cbtv_threads ORDER BY id"))
     thread_stacks = []
 
-    ctx.log_start("Compiling log")
     fp = open(log_file)
     fp.seek(0, 2)
     f_size = fp.tell()
@@ -88,9 +93,7 @@ def compile_log(log_file, database_file, app=None, append=False):
                 )
             )
     fp.close()
-    ctx.log_endok()
 
-    ctx.log_start("Indexing data")
     c.execute("DELETE FROM cbtv_threads")
     for idx, thr in enumerate(thread_names):
         (node, process, thread) = thr.split()
@@ -113,8 +116,6 @@ def compile_log(log_file, database_file, app=None, append=False):
     #    print(type(e.id), type(e.start_time), type(e.end_time))
     #    c2.execute("INSERT INTO cbtv_events_index VALUES (?, ?, ?)", (e.id, e.start_time, e.end_time))
     # c2.close()
-
-    ctx.log_endok()
 
     c.close()
     db.commit()

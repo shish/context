@@ -36,7 +36,7 @@ function svg2icon() {
 
 function build() {
 	VER=$1
-	echo "VERSION='$VER'" > ctx_ver.py
+	echo "VERSION='$VER'" > context/viewer/ctx_ver.py
 	echo "!define VERSION '${VER}'" > ctx_ver.nsh
 	
 	if [ ! -f ../pyinstaller-2.0/pyinstaller.py ] ; then

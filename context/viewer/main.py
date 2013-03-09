@@ -19,12 +19,12 @@ except ImportError:
 import sys
 import time
 import os
-from cbtk import *
+from .cbtk import set_icon, win_center, resource
 
 try:
     from Tkinter import *
     from tkMessageBox import *
-    from tkFileDialog import askopenfilename, asksaveasfilename
+    from tkFileDialog import askopenfilename  # , asksaveasfilename
     have_tk = True
 except ImportError:
     have_tk = False
@@ -36,13 +36,13 @@ except ImportError:
     have_ttk = False
 
 try:
-    from ctx_ver import VERSION
+    from .ctx_ver import VERSION
 except ImportError as ie:
     VERSION = "v0.0.0-demo"
 
 
-from .util import *
-from .compiler import compile
+from .util import conditional, gen_colour, shrink
+from .compiler import compile_log
 
 NAME = "Context"
 ROW_HEIGHT = 140
@@ -235,7 +235,7 @@ class _App:
 
         try:
             os.makedirs(os.path.expanduser(os.path.join("~", ".config")))
-        except OSError as e:
+        except OSError:
             pass
         self.config_file = os.path.expanduser(os.path.join("~", ".config", "context.cfg"))
 
@@ -338,7 +338,7 @@ class _App:
 
         self._last_log_dir = os.path.dirname(given_file)
 
-        path, ext = os.path.splitext(given_file)
+        path, _ext = os.path.splitext(given_file)
 
         log_file = path + ".ctxt"
         database_file = path + ".cbin"
@@ -362,7 +362,7 @@ class _App:
 
         try:
             self.c.execute("SELECT * FROM cbtv_events LIMIT 1")
-        except sqlite3.OperationalError as e:
+        except sqlite3.OperationalError:
             showerror("Error", "'%s' is not a valid context dump" % database_file, parent=self.master)
             return
 
@@ -555,7 +555,7 @@ class _App:
         try:
             s = self.render_start.get()
             e = self.render_start.get() + self.render_len.get()
-        except ValueError as ve:
+        except ValueError:
             return
 
         try:
@@ -617,7 +617,6 @@ class _App:
                 self.master.after(10, task)
             task()
 
-    @ctx.log("Rendering data", bookmark=True)
     def render(self):
         """
         Render settings changed, re-render with existing data
@@ -631,7 +630,6 @@ class _App:
         self.render_base()
         self.render_data()
 
-    @ctx.log("Cleaning old data")
     def render_clear(self):
         """
         clear the canvas and any cached variables
@@ -653,7 +651,6 @@ class _App:
             self.char_w = bb[2] - bb[0] - 2
             self.canvas.delete(t)
 
-    @ctx.log("Rendering scrubber activity")
     def render_scrubber_activity(self, length=None):
         sc = self.scrubber
 
@@ -673,7 +670,6 @@ class _App:
                     fill=col, outline=col, tags="activity",
                 )
 
-    @ctx.log("Rendering scrubber arrow")
     def render_scrubber_arrow(self):
         sc = self.scrubber
 
@@ -694,7 +690,7 @@ class _App:
         # view start / end / length
         vi_s = self.render_start.get()
         vi_e = self.render_start.get() + self.render_len.get()
-        vi_l = vi_e - vi_s
+        # vi_l = vi_e - vi_s
 
         # scrubber width
         sc_w = sc.winfo_width()
@@ -755,7 +751,6 @@ class _App:
             fill="#000", tags="arrow",
         )
 
-    @ctx.log("Rendering base grid")
     def render_base(self):
         """
         Render grid lines and markers
@@ -778,7 +773,6 @@ class _App:
 
         self.canvas.tag_lower("grid")
 
-    @ctx.log("Rendering events")
     def render_data(self):
         """
         add the event rectangles
@@ -787,13 +781,11 @@ class _App:
             # update() is called a couple of times during init()
             return
 
-        _lb = ProgressDialog(self.master, "Rendering")
         _rs = self.render_start.get()
         _rl = self.render_len.get()
         _rc = self.render_cutoff.get()
         _sc = self.scale.get()
 
-        threads = self.threads
         # thread_level_starts = [[], ] * len(self.threads)  # this bug is subtle and hilarious
         thread_level_ends = [[] for n in range(len(self.threads))]
 
@@ -801,7 +793,7 @@ class _App:
         shown = 0
         for n, event in enumerate(self.data):
             if n % 100 == 0:
-                _lb.update("Rendered %d events (%d%%)" % (n, float(n) * 100 / event_count))
+                self.set_status("Rendered %d events (%d%%)" % (n, float(n) * 100 / event_count))
                 self.master.update()
             thread_idx = event.thread_id
 
@@ -832,7 +824,7 @@ class _App:
                 # into a separate array?
                 pass  # render bookmark
 
-        _lb.destroy()
+        self.set_status("")
 
     def show(self, start, length, thread, level, event):
         function = event.start_location
@@ -919,16 +911,11 @@ def main(argv):
             help="location and size of window", metavar="GM")
     parser.add_option("-r", "--row-height", dest="row_height", default=140,
             type=int, help="height of the rows", metavar="PX")
-    parser.add_option("-c", "--context", dest="context", default=False, action="store_true",
-            help="use context to profile itself")
     (options, args) = parser.parse_args(argv)
 
     # lol constants
     global ROW_HEIGHT
     ROW_HEIGHT = options.row_height
-
-    if options.context:
-        ctx.set_log("context.ctxt")
 
     if len(args) > 1:
         filename = args[1]

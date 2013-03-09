@@ -1,12 +1,3 @@
-try:
-    import context as ctx
-except ImportError as ie:
-    class ctx:
-        @staticmethod
-        def set_log(*args): pass
-        log_start = log_endok = log_ender = set_log
-        @staticmethod
-        def log(f, *args, **kwargs): return lambda f: f
 
 
 def conditional(v, f):
