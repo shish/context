@@ -37,7 +37,7 @@ function build() {
 	echo "VERSION='$VER'" > ctx_ver.py
 	echo "!define VERSION '${VER}'" > ctx_ver.nsh
 
-	$PYTHON ../pyinstaller-1.5.1/pyinstaller.py --tk --onefile --windowed --upx $ICON context
+	$PYTHON ../pyinstaller-2.0/pyinstaller.py --onefile --windowed $ICON context
 
 	if [ "`uname -s`" = "Linux" ] ; then
 		rm -rf context-$VER

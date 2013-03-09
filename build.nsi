@@ -23,8 +23,6 @@ SetCompressor /SOLID lzma
 # TargetMinimalOS 5.0
 
 section
-	setOutPath $INSTDIR\api
-	file "api\"
 	setOutPath $INSTDIR\images
 	file "images\"
 	setOutPath $INSTDIR\docs
@@ -50,7 +48,6 @@ section "Uninstall"
 	delete $INSTDIR\context.exe
 	rmdir /r $INSTDIR\docs
 	rmdir /r $INSTDIR\images
-	rmdir /r $INSTDIR\api
 
 	rmdir $INSTDIR
 sectionEnd
