@@ -502,11 +502,24 @@ class _App:
         self._last_log_dir = os.path.dirname(filename)
 
         path, ext = os.path.splitext(filename)
-        if ext == ".ctxt":
-            compile_log(path+".ctxt", path+".cbin", self.master)
-            ext = ".cbin"
 
-        database_file = path + ext
+        log_file = path + ".ctxt"
+        database_file = path + ".cbin"
+
+        # if the user picked a log file, compile it (unless an
+        # up-to-date version already exists)
+        if filename == logfile:
+            needs_recompile = False
+            
+            if not os.path.exists(database_file):
+                needs_recompile = True
+                print("Compiled log not found, compiling")
+            elif os.path.stat(log_file).st_mtime > os.path.stat(database_file).st_mtime:
+                needs_recompile = True
+                print("Compiled log is out of date, recompiling")
+            
+            if needs_recompile:
+                compile_log(log_file, database_file, self.master)
 
         self.c = sqlite3.connect(database_file)
 
