@@ -45,17 +45,19 @@ def win_center(root):
     h = root.winfo_reqheight()
     ws = root.winfo_screenwidth()
     hs = root.winfo_screenheight()
-    x = (ws/2) - (w/2)
-    y = (hs/2) - (h/2)
+    x = (ws / 2) - (w / 2)
+    y = (hs / 2) - (h / 2)
     root.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
 def resource(path):
     ideas = [
         os.path.join(os.path.dirname(sys.argv[0]), path),
         os.path.join(os.environ.get("_MEIPASS2", "/"), path),
-        os.path.join("..", "..", "..", path),
         path,
     ]
+    for n in range(0, 5):
+        parts = ([".."] * n + [path])
+        ideas.append(os.path.join(*parts))
     for p in ideas:
         if os.path.exists(p):
             return p

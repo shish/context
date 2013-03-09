@@ -10,7 +10,6 @@
 from __future__ import print_function
 from optparse import OptionParser
 import ConfigParser
-import threading
 import datetime
 try:
     import pysqlite2.dbapi2 as sqlite3  # need this for rtree indexing on windows
@@ -19,7 +18,6 @@ except ImportError:
 import sys
 import time
 import os
-from .cbtk import set_icon, win_center, resource
 
 try:
     from Tkinter import *
@@ -36,13 +34,15 @@ except ImportError:
     have_ttk = False
 
 try:
-    from .ctx_ver import VERSION
+    from context.viewer.ctx_ver import VERSION
 except ImportError as ie:
     VERSION = "v0.0.0-demo"
 
 
-from .util import conditional, gen_colour, shrink
-from .compiler import compile_log
+from context.viewer.cbtk import set_icon, win_center, resource
+from context.viewer.types import Event
+from context.viewer.util import conditional, gen_colour, shrink
+from context.viewer.compiler import compile_log
 
 NAME = "Context"
 ROW_HEIGHT = 140
