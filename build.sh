@@ -1,14 +1,16 @@
 #!/bin/bash
 
-PATH=$PATH:/c/Python27/:/opt/local/bin/:/c/local/:/c/Program\ Files\ \(x86\)/NSIS/
-VERSION=`git describe`
-ARCH=`uname -m`
+export PATH=$PATH:/c/Python27/:/c/msysgit/bin/:/c/msysgit/libexec/git-core/:/c/local/:/c/Program\ Files\ \(x86\)/NSIS/
+export PATH=$PATH:/opt/local/bin/
+export VERSION=`git describe`
+export ARCH=`uname -m`
+export OS=`uname -s`
 
-if [ "`uname -s`" = "Darwin" ] ; then
+if [ "$OS" = "Darwin" ] ; then
 	export VERSIONER_PYTHON_PREFER_32_BIT=yes
 	PYTHON="arch -i386 python2.7"
 	ICON="--icon images/context-icon.icns"
-elif [ "`uname -s`" = "MINGW32_NT-6.1" ] ; then
+elif [ "$OS" = "MINGW32_NT-6.1" ] ; then
 	PYTHON=python
 	ICON="--icon images/context-icon.ico"
 else
@@ -18,7 +20,7 @@ fi
 
 function svg2icon() {
 	rsvg-convert -a -w 128 -h 128 images/$1.svg -o images/$1.png
-	if [ "`uname -s`" = "MINGW32_NT-6.1" ] ; then
+	if [ "$OS" = "MINGW32_NT-6.1" ] ; then
 		convert -background none images/$1.png \
 			\( -clone 0 -resize 64x64 \) \
 			\( -clone 0 -resize 48x48 \) \
@@ -26,7 +28,7 @@ function svg2icon() {
 			\( -clone 0 -resize 16x16 \) \
 			-delete 0 images/$1.ico
 	fi
-	if [ "`uname -s`" = "Darwin" ] ; then
+	if [ "$OS" = "Darwin" ] ; then
 		makeicns -512 images/$1.png -128 images/$1.png -64 images/$1.png
 	fi
 	# for linux, keep the .png
@@ -36,10 +38,13 @@ function build() {
 	VER=$1
 	echo "VERSION='$VER'" > ctx_ver.py
 	echo "!define VERSION '${VER}'" > ctx_ver.nsh
+	
+	if [ ! -f ../pyinstaller-2.0/pyinstaller.py ] ; then
+		git clone https://github.com/pyinstaller/pyinstaller.git ../pyinstaller-2.0
+	fi
+	$PYTHON ../pyinstaller-2.0/pyinstaller.py --onefile --log-level WARN --windowed $ICON context
 
-	$PYTHON ../pyinstaller-2.0/pyinstaller.py --onefile --windowed $ICON context
-
-	if [ "`uname -s`" = "Linux" ] ; then
+	if [ "$OS" = "Linux" ] ; then
 		rm -rf context-$VER
 		mkdir context-$VER
 		cp -rv api context-$VER/
@@ -48,7 +53,7 @@ function build() {
 		cp -rv images context-$VER/
 		tar cvzf context-$VER-$ARCH.tgz --exclude "*.pyc" context-$VER
 	fi
-	if [ "`uname -s`" = "Darwin" ] ; then
+	if [ "$OS" = "Darwin" ] ; then
 		rm -rf context-$VER
 		mkdir context-$VER
 		cp -rv api context-$VER/
@@ -69,14 +74,22 @@ function build() {
 		# auto-extract to desktop
 		#hdiutil internet-enable -yes context-$VER-$ARCH.dmg
 	fi
-	if [ "`uname -s`" = "MINGW32_NT-6.1" ] ; then
+	if [ "$OS" = "MINGW32_NT-6.1" ] ; then
 		makensis build.nsi
 	fi
 }
 
-rsvg-convert -a -w 256 images/context-name.svg -o images/context-name.png
-convert -background white -bordercolor white -border 15x5 images/context-name.png images/context-name.gif
-svg2icon tools-icon
-svg2icon context-icon
+echo "Building static files"
+rsvg-convert -a -w 256 images/context-name.svg -o images/context-name.png >> build.log
+convert -background white -bordercolor white -border 15x5 images/context-name.png images/context-name.gif >> build.log
+svg2icon tools-icon >> build.log
+svg2icon context-icon >> build.log
+echo "Built static files"
+
+echo "Building main"
 build $VERSION
-build $VERSION-demo
+echo "Built main"
+
+echo "Building demo"
+build $VERSION-demo >> build.log
+echo "Built demo"
