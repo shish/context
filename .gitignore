@@ -13,6 +13,7 @@ ctx_ver.*
 pyinstaller-*/
 build/
 dist/
+context-*
 images/*-icon.*
 !images/*-icon.svg
 images/*-name.*
