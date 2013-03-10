@@ -15,15 +15,18 @@ except ImportError:
     import sqlite3
 
 try:
-    from Tkinter import *
-    from tkMessageBox import *
+    from Tkinter import Tk, Toplevel
+    from Tkinter import DoubleVar, IntVar
+    from Tkinter import Label, Scrollbar, Text, Menu, Frame, Spinbox, PhotoImage, Listbox, Canvas
+    from Tkinter import N, E, S, W, SW, NW, ALL, END, VERTICAL, HORIZONTAL, CENTER, WORD, LEFT, RIGHT, BOTH, Y
+    from tkMessageBox import showerror
     from tkFileDialog import askopenfilename  # , asksaveasfilename
     have_tk = True
 except ImportError:
     have_tk = False
 
 try:
-    from ttk import *
+    from ttk import Button, Sizegrip
     have_ttk = True
 except ImportError:
     have_ttk = False
@@ -81,10 +84,10 @@ class _App:
         menubar.add_cascade(label="View", menu=view_menu())
 
         def analyse_menu():
-            def timechart():
-                _TimeChart(master, self.output.get("0.0", END))
+            # def timechart():
+            #    _TimeChart(master, self.output.get("0.0", END))
             analysemenu = Menu(menubar, tearoff=0)
-            analysemenu.add_command(label="Time Chart", command=timechart)
+            # analysemenu.add_command(label="Time Chart", command=timechart)
             return analysemenu
         # menubar.add_cascade(label="Analyse", menu=analyse_menu())
 

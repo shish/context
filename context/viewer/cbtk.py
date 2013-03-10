@@ -8,12 +8,6 @@ try:
 except ImportError:
     have_tk = False
 
-try:
-    from ttk import *
-    have_ttk = True
-except ImportError:
-    have_ttk = False
-
 
 class ProgressDialog:
     def __init__(self, master, title):
