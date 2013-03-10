@@ -8,16 +8,11 @@
 # - seeing what is locking software is good
 
 from __future__ import print_function
-from optparse import OptionParser
-import ConfigParser
-import datetime
+
 try:
     import pysqlite2.dbapi2 as sqlite3  # need this for rtree indexing on windows
 except ImportError:
     import sqlite3
-import sys
-import time
-import os
 
 try:
     from Tkinter import *
@@ -32,6 +27,13 @@ try:
     have_ttk = True
 except ImportError:
     have_ttk = False
+
+from optparse import OptionParser
+import ConfigParser
+import datetime
+import sys
+import time
+import os
 
 try:
     from context.viewer.ctx_ver import VERSION
@@ -910,7 +912,7 @@ def main(argv):
     parser = OptionParser()
     parser.add_option("-g", "--geometry", dest="geometry", default="770x600",
             help="location and size of window", metavar="GM")
-    parser.add_option("-r", "--row-height", dest="row_height",
+    parser.add_option("-r", "--row-height", dest="row_height", default=140,
             type=int, help="height of the rows", metavar="PX")
     (options, args) = parser.parse_args(argv)
 
