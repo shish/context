@@ -36,8 +36,7 @@ except ImportError:
 try:
     from context.viewer.ctx_ver import VERSION
 except ImportError as ie:
-    VERSION = "v0.0.0-demo"
-
+    VERSION = "v0.0.0"
 
 from context.viewer.cbtk import set_icon, win_center, resource
 from context.viewer.types import Event
@@ -317,6 +316,8 @@ class _App:
             self.load_file(database_file)
 
     def set_status(self, text):
+        if text:
+            print(text)
         self.status.config(text=text)
         self.master.update()
 
@@ -907,9 +908,9 @@ def main(argv):
     filename = None
 
     parser = OptionParser()
-    parser.add_option("-g", "--geometry", dest="geometry",
+    parser.add_option("-g", "--geometry", dest="geometry", default="770x600",
             help="location and size of window", metavar="GM")
-    parser.add_option("-r", "--row-height", dest="row_height", default=140,
+    parser.add_option("-r", "--row-height", dest="row_height",
             type=int, help="height of the rows", metavar="PX")
     (options, args) = parser.parse_args(argv)
 
