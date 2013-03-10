@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 
-import sys
-sys.path.append("../api/")
-
 from threading import Thread
 from time import sleep
-import context as c
+import context.api as c
 
 
 def thread_1():
@@ -122,7 +119,7 @@ def thread_4():
     c.log_endok("", "Read article")
 
 if __name__ == "__main__":
-    c.set_log("demo.ctxt")
+    c.set_log("file://demo.ctxt")
     Thread(target=thread_1, name="Server-1").start()
     sleep(0.01)
     Thread(target=thread_2, name="Server-2").start()
