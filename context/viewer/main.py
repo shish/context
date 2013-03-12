@@ -17,7 +17,7 @@ except ImportError:
 try:
     from Tkinter import Tk, Toplevel
     from Tkinter import DoubleVar, IntVar
-    from Tkinter import Label, Scrollbar, Text, Menu, Frame, Spinbox, PhotoImage, Listbox, Canvas
+    from Tkinter import Label, Scrollbar, Text, Menu, Frame, Spinbox, PhotoImage, Listbox, Canvas, Button
     from Tkinter import N, E, S, W, SW, NW, ALL, END, VERTICAL, HORIZONTAL, CENTER, WORD, LEFT, RIGHT, BOTH, Y
     from tkMessageBox import showerror
     from tkFileDialog import askopenfilename  # , asksaveasfilename
