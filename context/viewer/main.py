@@ -585,7 +585,7 @@ class _App:
                         SELECT *
                         FROM cbtv_events
                         WHERE id IN (SELECT id FROM cbtv_events_index WHERE end_time > ? AND start_time < ?)
-                        AND (end_time - start_time) * 1000 > ?
+                        AND (end_time - start_time) * 1000 >= ?
                         ORDER BY start_time ASC, end_time DESC
                     """,
                     (s - self.event_idx_offset, e - self.event_idx_offset, self.render_cutoff.get())
