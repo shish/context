@@ -207,6 +207,7 @@ class _App:
             width=800, height=20,
             background="white",
         )
+
         def sc_goto(e):
             width_fraction = float(e.x) / sc.winfo_width()
             ev_s = self.get_earliest_bookmark_after(0)
@@ -217,12 +218,14 @@ class _App:
                 self.update()
             self.canvas.xview_moveto(0.5)
         sc.bind("<1>", sc_goto)
+
         def resize(event):
             if self.c:
                 self.render_scrubber_activity()
                 self.render_scrubber_arrow()
             # sc.coords(line, 0, 0, event.width, event.height)
         sc.bind("<Configure>", resize)
+
         return sc
 
     def __init__(self, master, database_file):
@@ -566,6 +569,7 @@ class _App:
 
         try:
             self.n = 0
+
             def progress(*args):
                 try:
                     self.n = self.n + 1
@@ -609,6 +613,7 @@ class _App:
             self.sc_activity = [0] * 1000
 
             self._scrubber_data_point = 0
+
             def task():
                 if self._scrubber_data_point >= len(self.sc_activity):
                     return
