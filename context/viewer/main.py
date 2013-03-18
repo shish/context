@@ -800,10 +800,10 @@ class _App:
         # thread_level_starts = [[], ] * len(self.threads)  # this bug is subtle and hilarious
         thread_level_ends = [[] for n in range(len(self.threads))]
 
-        event_count = len(self.data)
+        event_count = len(self.data) - 1
         shown = 0
         for n, event in enumerate(self.data):
-            if n % 100 == 0:
+            if n % 100 == 0 or n == event_count:
                 self.set_status("Rendered %d events (%d%%)" % (n, float(n) * 100 / event_count))
                 self.master.update()
             thread_idx = event.thread_id
