@@ -897,7 +897,7 @@ class _App:
 
         t2 = self.canvas.create_text(
             x0 + 4, y0 + BLOCK_HEIGHT + 4,
-            text=tip.strip(), width=200, tags="tooltip", anchor=NW,
+            text=tip.strip(), width=400, tags="tooltip", anchor=NW,
             justify="left", state="disabled",
         )
 
