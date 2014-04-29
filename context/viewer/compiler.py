@@ -100,9 +100,9 @@ def compile_log(log_file, database_file, app=None, append=False):
                     s.location, s.timestamp, s.type, s.text,
                     e.location, e.timestamp, e.type, e.text,
                 ))
-            if len(events) == 2500:
+            if len(events) == 1000:
                 store(c, events)
-            events = []
+                events = []
     store(c, events)
     fp.close()
 
