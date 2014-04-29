@@ -1,4 +1,5 @@
 import os
+from time import time
 try:
     import pysqlite2.dbapi2 as sqlite3  # need this for rtree indexing on windows
 except ImportError:
@@ -6,6 +7,23 @@ except ImportError:
 
 
 from .types import LogEvent
+
+
+def store(c, events):
+    c.executemany(
+        """
+        INSERT INTO cbtv_events(
+            thread_id,
+            start_location, start_time, start_type, start_text,
+            end_location, end_time, end_type, end_text
+        )
+        VALUES(
+            ?,
+            ?, ?, ?, ?,
+            ?, ?, ?, ?
+        )
+        """, events
+    )
 
 
 def compile_log(log_file, database_file, app=None, append=False):
@@ -40,9 +58,13 @@ def compile_log(log_file, database_file, app=None, append=False):
     f_size = fp.tell()
     fp.seek(0, 0)
     first_event_start = 0
+    events = []
+    timestamp = time()
     for n, line in enumerate(fp):
-        if n % 1000 == 0:
-            app.set_status("Imported %d events (%d%%)" % (n, fp.tell() * 100.0 / f_size))
+        if n % 10000 == 0:
+            time_taken = time() - timestamp
+            app.set_status("Imported %d events (%d%%, %d/s)" % (n, fp.tell() * 100.0 / f_size, 1000/time_taken))
+            timestamp = time()
 
         e = LogEvent(line.decode("utf-8"))
 
@@ -73,25 +95,15 @@ def compile_log(log_file, database_file, app=None, append=False):
             except IndexError:
                 # the log started with an END
                 continue
-            c.execute(
-                """
-                INSERT INTO cbtv_events(
-                    thread_id,
-                    start_location, start_time, start_type, start_text,
-                    end_location, end_time, end_type, end_text
-                )
-                VALUES(
-                    ?,
-                    ?, ?, ?, ?,
-                    ?, ?, ?, ?
-                )
-                """,
-                (
+            events.append((
                     thread_id,
                     s.location, s.timestamp, s.type, s.text,
                     e.location, e.timestamp, e.type, e.text,
-                )
-            )
+                ))
+            if len(events) == 2500:
+                store(c, events)
+            events = []
+    store(c, events)
     fp.close()
 
     c.execute("DELETE FROM cbtv_threads")
