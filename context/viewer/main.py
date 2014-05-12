@@ -32,6 +32,7 @@ except ImportError:
     have_ttk = False
 
 from optparse import OptionParser
+import subprocess
 import ConfigParser
 import datetime
 import sys
@@ -43,10 +44,9 @@ try:
 except ImportError as ie:
     VERSION = "v0.0.0"
 
+from context.types import Event
 from context.viewer.cbtk import set_icon, win_center, resource
-from context.viewer.types import Event
 from context.viewer.util import conditional, gen_colour, shrink
-from context.viewer.compiler import compile_log
 
 NAME = "Context"
 ROW_HEIGHT = 140
@@ -54,7 +54,7 @@ BLOCK_HEIGHT = 20
 MIN_PPS = 1
 MAX_PPS = 5000
 MIN_SEC = 1
-MAX_SEC = 60
+MAX_SEC = 600
 
 if VERSION.endswith("-demo"):
     NAME = NAME + ": Non-commercial / Evaluation Version"
@@ -239,6 +239,7 @@ class _App:
         self.event_idx_offset = 0
         self._last_log_dir = os.path.expanduser("~/")
         self.c = None  # database connection
+        self.compiler = None
 
         try:
             os.makedirs(os.path.expanduser(os.path.join("~", ".config")))
@@ -365,7 +366,13 @@ class _App:
                 print("Compiled log is out of date, recompiling")
 
             if needs_recompile:
-                compile_log(log_file, database_file, self)
+                self.compiler = subprocess.Popen(["context-compiler", log_file, "-o", database_file], stdout=subprocess.PIPE)
+                while True:
+                    line = self.compiler.stdout.readline()
+                    if line:
+                        self.set_status(line.strip())
+                    else:
+                        break
 
         self.c = sqlite3.connect(database_file)
 
@@ -803,7 +810,7 @@ class _App:
         event_count = len(self.data) - 1
         shown = 0
         for n, event in enumerate(self.data):
-            if n % 100 == 0 or n == event_count:
+            if n % 1000 == 0 or n == event_count:
                 self.set_status("Rendered %d events (%d%%)" % (n, float(n) * 100 / event_count))
                 self.master.update()
             thread_idx = event.thread_id
@@ -914,7 +921,7 @@ class _App:
         self.canvas.delete("tooltip")
 
 
-def main(argv):
+def main(argv=sys.argv):
     filename = None
 
     parser = OptionParser()
