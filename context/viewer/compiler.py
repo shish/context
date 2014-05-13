@@ -96,14 +96,15 @@ def compile_log(log_file, database_file, app=None, append=False):
                 # the log started with an END
                 continue
             events.append((
-                    thread_id,
-                    s.location, s.timestamp, s.type, s.text,
-                    e.location, e.timestamp, e.type, e.text,
-                ))
+                thread_id,
+                s.location, s.timestamp, s.type, s.text,
+                e.location, e.timestamp, e.type, e.text,
+            ))
             if len(events) == 1000:
                 store(c, events)
                 events = []
-    store(c, events)
+    if events:
+        store(c, events)
     fp.close()
 
     c.execute("DELETE FROM cbtv_threads")
@@ -116,12 +117,17 @@ def compile_log(log_file, database_file, app=None, append=False):
 
     app.set_status("Indexing bookmarks...")
 
-    c.execute("CREATE INDEX IF NOT EXISTS idx_start_type_time ON cbtv_events(start_type, start_time)")  # searching for bookmarks
+    c.execute("CREATE INDEX IF NOT EXISTS idx_start_type_time ON cbtv_events(start_type, start_time)")
 
     app.set_status("Indexing events...")
 
     c.execute("CREATE VIRTUAL TABLE cbtv_events_index USING rtree(id, start_time, end_time)")
-    c.execute("INSERT INTO cbtv_events_index SELECT id, start_time-?, end_time-? FROM cbtv_events WHERE start_time IS NOT NULL AND end_time IS NOT NULL", (first_event_start, first_event_start))
+    c.execute("""
+        INSERT INTO cbtv_events_index
+        SELECT id, start_time-?, end_time-?
+        FROM cbtv_events
+        WHERE start_time IS NOT NULL AND end_time IS NOT NULL
+    """, (first_event_start, first_event_start))
     # c2 = db.cursor()
     # for row in c.execute("SELECT * FROM cbtv_events WHERE start_time IS NOT NULL AND end_time IS NOT NULL"):
     #    e = Event(row)
