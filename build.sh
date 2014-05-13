@@ -48,7 +48,7 @@ function build() {
 	if [ "$OS" = "Linux" ] ; then
 		rm -rf context-$VER
 		mkdir context-$VER
-		cp -rv docs context-$VER/
+		cp -rv docs/* context-$VER/
 		cp dist/* context-$VER/
 		cp -rv images context-$VER/
 		tar cvzf context-$VER-$ARCH.tgz --exclude "*.pyc" context-$VER
@@ -56,7 +56,7 @@ function build() {
 	if [ "$OS" = "Darwin" ] ; then
 		rm -rf context-$VER
 		mkdir context-$VER
-		cp -rv docs context-$VER/
+		cp -rv docs/* context-$VER/
 		cp -rv dist/context.app context-$VER/
 		CONTENTS=context-$VER/context.app/Contents/
 		cp images/context-icon.icns $CONTENTS/Resources/App.icns
