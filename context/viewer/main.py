@@ -68,27 +68,27 @@ class _App:
         menubar = Menu(master)
 
         def file_menu():
-            filemenu = Menu(menubar, tearoff=0)
-            filemenu.add_command(label="Open ctxt / cbin", command=self.open_file)
-            # filemenu.add_command(label="Append ctxt", command=self.append_file)
-            filemenu.add_separator()
-            filemenu.add_command(label="Exit", command=self.save_settings_and_quit)
-            return filemenu
+            menu = Menu(menubar, tearoff=0)
+            menu.add_command(label="Open ctxt / cbin", command=self.open_file)
+            # menu.add_command(label="Append ctxt", command=self.append_file)
+            menu.add_separator()
+            menu.add_command(label="Exit", command=self.save_settings_and_quit)
+            return menu
         menubar.add_cascade(label="File", menu=file_menu())
 
         def view_menu():
-            viewmenu = Menu(menubar, tearoff=0)
-            viewmenu.add_checkbutton(label="Auto-render", variable=self.render_auto)
-            # viewmenu.add_command(label="Filter threads", command=None)
-            return viewmenu
+            menu = Menu(menubar, tearoff=0)
+            menu.add_checkbutton(label="Auto-render", variable=self.render_auto)
+            # menu.add_command(label="Filter threads", command=None)
+            return menu
         menubar.add_cascade(label="View", menu=view_menu())
 
         def analyse_menu():
             # def timechart():
             #    _TimeChart(master, self.output.get("0.0", END))
-            analysemenu = Menu(menubar, tearoff=0)
-            # analysemenu.add_command(label="Time Chart", command=timechart)
-            return analysemenu
+            menu = Menu(menubar, tearoff=0)
+            # menu.add_command(label="Time Chart", command=timechart)
+            return menu
         # menubar.add_cascade(label="Analyse", menu=analyse_menu())
 
         def help_menu():
@@ -99,7 +99,7 @@ class _App:
                 t.resizable(False, False)
                 Label(t, image=self.img_logo).grid(column=0, row=0, sticky=(E, W))
                 Label(t, text="Context %s" % VERSION, anchor=CENTER).grid(column=0, row=1, sticky=(E, W))
-                Label(t, text="(c) 2011-2013 Shish", anchor=CENTER).grid(column=0, row=2, sticky=(E, W))
+                Label(t, text="(c) 2011-2014 Shish", anchor=CENTER).grid(column=0, row=2, sticky=(E, W))
                 Button(t, text="Close", command=t.destroy).grid(column=0, row=3, sticky=(E,))
                 win_center(t)
 
@@ -147,6 +147,8 @@ class _App:
         menubar.add_cascade(label="Help", menu=help_menu())
 
         master.config(menu=menubar)
+
+        return menubar
 
     def __control_box(self, master):
         f = Frame(master)
@@ -231,7 +233,7 @@ class _App:
     def __init__(self, master, database_file):
         self.master = master
         self.char_w = -1
-        self.softscale = 1.0
+        self.soft_scale = 1.0
         self.window_ready = False
         self.data = []
         self.scrubber = None  # render is called before init finished?
@@ -514,7 +516,7 @@ class _App:
         except sqlite3.OperationalError:
             return 0
 
-    def scale_view(self, e=None, n=1):
+    def scale_view(self, e=None, n=1.0):
         # get the old pos
         if e:
             _xv = self.canvas.xview()
@@ -524,7 +526,7 @@ class _App:
             x_pos = left_edge + width * width_fraction
         # scale
         if n != 1:
-            self.softscale = self.softscale * n
+            self.soft_scale *= n
             self.canvas.scale("event", 0, 0, n, 1)
             for t in self.canvas.find_withtag("time_label"):
                 val = self.canvas.itemcget(t, 'text')[2:]
@@ -572,7 +574,7 @@ class _App:
 
             def progress(*args):
                 try:
-                    self.n = self.n + 1
+                    self.n += 1
                     self.set_status("Loading... (%dk opcodes)" % (self.n * 10))
                     return 0
                 except Exception as e:
@@ -634,7 +636,7 @@ class _App:
         """
         if not MIN_PPS < self.scale.get() < MAX_PPS:
             return
-        self.softscale = 1.0
+        self.soft_scale = 1.0
         self.render_clear()
         self.render_scrubber_activity()
         self.render_scrubber_arrow()
@@ -768,7 +770,7 @@ class _App:
         """
         _rs = self.render_start.get()
         _rl = self.render_len.get()
-        _sc = self.scale.get() * self.softscale
+        _sc = self.scale.get() * self.soft_scale
 
         rs_px = int(_rl * _sc)
         rl_px = int(_rl * _sc)
@@ -818,7 +820,7 @@ class _App:
                 stack_len = len(thread_level_ends[thread_idx]) - 1
                 if (event.end_time - event.start_time) * 1000 < _rc:
                     continue
-                shown = shown + 1
+                shown += 1
                 if shown == 500 and VERSION.endswith("-demo"):
                     showerror("Demo Limit", "The evaluation build is limited to showing 500 events at a time, so rendering has stopped")
                     break
