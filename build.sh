@@ -50,7 +50,6 @@ function build() {
 		mkdir context-$VER
 		cp -rv docs/* context-$VER/
 		cp dist/* context-$VER/
-		cp -rv images context-$VER/
 		tar cvzf context-$VER-$ARCH.tgz --exclude "*.pyc" context-$VER
 	fi
 	if [ "$OS" = "Darwin" ] ; then
@@ -60,7 +59,6 @@ function build() {
 		cp -rv dist/context.app context-$VER/
 		CONTENTS=context-$VER/context.app/Contents/
 		cp images/context-icon.icns $CONTENTS/Resources/App.icns
-		cp -rv images $CONTENTS/MacOS/
 		mv $CONTENTS/MacOS/context $CONTENTS/MacOS/context.bin
 		echo '#!/bin/sh' > $CONTENTS/MacOS/context
 		echo 'cd "`dirname \"$0\"`"' >> $CONTENTS/MacOS/context
@@ -83,6 +81,7 @@ rsvg-convert -a -w 256 images/context-name.svg -o images/context-name.png >> bui
 convert -background white -bordercolor white -border 15x5 images/context-name.png images/context-name.gif >> build.log
 svg2icon tools-icon >> build.log
 svg2icon context-icon >> build.log
+python compile-images.py > context/viewer/images.py
 echo "Built static files"
 
 echo "Building demo"

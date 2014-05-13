@@ -47,6 +47,8 @@ except ImportError as ie:
 from context.types import Event
 from context.viewer.cbtk import set_icon, win_center, resource
 from context.viewer.util import conditional, gen_colour, shrink
+import context.viewer.images as images
+
 
 NAME = "Context"
 ROW_HEIGHT = 140
@@ -264,11 +266,11 @@ class _App:
         self.render_cutoff.trace_variable("w", lambda *x: conditional(self.render_auto, self.render))
         self.scale.trace_variable("w", lambda *x: conditional(self.render_auto, self.render))
 
-        self.img_start = PhotoImage(file=resource("images/start.gif"))
-        self.img_prev = PhotoImage(file=resource("images/prev.gif"))
-        self.img_next = PhotoImage(file=resource("images/next.gif"))
-        self.img_end = PhotoImage(file=resource("images/end.gif"))
-        self.img_logo = PhotoImage(file=resource("images/context-name.gif"))
+        self.img_start = PhotoImage(data=images.start)
+        self.img_prev = PhotoImage(data=images.prev)
+        self.img_next = PhotoImage(data=images.next)
+        self.img_end = PhotoImage(data=images.end)
+        self.img_logo = PhotoImage(data=images.context_name)
 
         self.h = Scrollbar(master, orient=HORIZONTAL)
         self.v = Scrollbar(master, orient=VERTICAL)

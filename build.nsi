@@ -5,7 +5,7 @@
 Name "Context ${VERSION}"
 Outfile context-${VERSION}-i686.exe
 Icon images\tools-icon.ico
-LicenseData docs\LICENSE.txt
+LicenseData LICENSE.txt
 
 InstallDir "$PROGRAMFILES32\Context"
 InstallDirRegKey HKCU "Software\Context" ""
@@ -23,17 +23,14 @@ SetCompressor /SOLID lzma
 # TargetMinimalOS 5.0
 
 section
-	setOutPath $INSTDIR\images
-	file "images\"
-	setOutPath $INSTDIR\docs
-	file "docs\"
 	setOutPath $INSTDIR
-	file "dist\context.exe"
+	file "dist\context-viewer.exe"
+	file "dist\context-compiler.exe"
 
-	${registerExtension} "$INSTDIR\context.exe" ".ctxt" "Context Text"
-	${registerExtension} "$INSTDIR\context.exe" ".cbin" "Context Binary"
+	${registerExtension} "$INSTDIR\context-viewer.exe" ".ctxt" "Context Text"
+	${registerExtension} "$INSTDIR\context-viewer.exe" ".cbin" "Context Binary"
 
-	createShortCut "$SMPROGRAMS\Context.lnk" "$INSTDIR\context.exe"
+	createShortCut "$SMPROGRAMS\Context.lnk" "$INSTDIR\context-viewer.exe"
 	WriteRegStr HKCU "Software\Context" "" $INSTDIR
 	writeUninstaller $INSTDIR\uninstaller.exe
 sectionEnd
@@ -45,9 +42,7 @@ section "Uninstall"
 	${unregisterExtension} ".cbin" "Context Binary"
 	${unregisterExtension} ".ctxt" "Context Text"
 
-	delete $INSTDIR\context.exe
-	rmdir /r $INSTDIR\docs
-	rmdir /r $INSTDIR\images
-
-	rmdir $INSTDIR
+	delete $INSTDIR\context-compiler.exe
+	delete $INSTDIR\context-viewer.exe
+	rmdir /r $INSTDIR
 sectionEnd
