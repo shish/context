@@ -21,7 +21,7 @@ setup(
     entry_points="""\
     [console_scripts]
     context-viewer = context.viewer.main:main
-    context-compiler = context.compiler:main
+    context-compiler = context.compiler.main:main
     """,
 )
 

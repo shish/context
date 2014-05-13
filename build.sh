@@ -42,7 +42,8 @@ function build() {
 	if [ ! -f ../pyinstaller-2.0/pyinstaller.py ] ; then
 		git clone https://github.com/pyinstaller/pyinstaller.git ../pyinstaller-2.0
 	fi
-	$PYTHON ../pyinstaller-2.0/pyinstaller.py --onefile --log-level WARN --windowed $ICON --name context context/viewer/main.py
+	$PYTHON ../pyinstaller-2.0/pyinstaller.py --onefile --log-level WARN --windowed $ICON --name context-viewer context/viewer/main.py
+	$PYTHON ../pyinstaller-2.0/pyinstaller.py --onefile --log-level WARN --console $ICON --name context-compiler context/compiler/main.py
 
 	if [ "$OS" = "Linux" ] ; then
 		rm -rf context-$VER
@@ -86,10 +87,10 @@ svg2icon tools-icon >> build.log
 svg2icon context-icon >> build.log
 echo "Built static files"
 
-echo "Building main"
-build $VERSION
-echo "Built main"
-
 echo "Building demo"
 build $VERSION-demo >> build.log
 echo "Built demo"
+
+echo "Building main"
+build $VERSION
+echo "Built main"
