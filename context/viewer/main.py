@@ -40,7 +40,7 @@ import time
 import os
 
 try:
-    from context.viewer.ctx_ver import VERSION
+    from context.version import VERSION
 except ImportError as ie:
     VERSION = "v0.0.0"
 

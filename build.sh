@@ -36,8 +36,8 @@ function svg2icon() {
 
 function build() {
 	VER=$1
-	echo "VERSION='$VER'" > context/viewer/ctx_ver.py
-	echo "!define VERSION '${VER}'" > ctx_ver.nsh
+	echo "VERSION='$VER'" > context/version.py
+	echo "!define VERSION '${VER}'" > version.nsh
 	
 	if [ ! -f ../pyinstaller-2.0/pyinstaller.py ] ; then
 		git clone https://github.com/pyinstaller/pyinstaller.git ../pyinstaller-2.0

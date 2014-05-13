@@ -1,5 +1,5 @@
 !include "file_assoc.nsh"
-!include "ctx_ver.nsh"
+!include "version.nsh"
 
 ; !include "MUI2.nsh"
 Name "Context ${VERSION}"
