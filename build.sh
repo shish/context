@@ -48,7 +48,6 @@ function build() {
 	if [ "$OS" = "Linux" ] ; then
 		rm -rf context-$VER
 		mkdir context-$VER
-		cp -rv api context-$VER/
 		cp -rv docs context-$VER/
 		cp dist/* context-$VER/
 		cp -rv images context-$VER/
@@ -57,7 +56,6 @@ function build() {
 	if [ "$OS" = "Darwin" ] ; then
 		rm -rf context-$VER
 		mkdir context-$VER
-		cp -rv api context-$VER/
 		cp -rv docs context-$VER/
 		cp -rv dist/context.app context-$VER/
 		CONTENTS=context-$VER/context.app/Contents/
