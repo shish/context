@@ -61,6 +61,8 @@ MAX_SEC = 600
 if VERSION.endswith("-demo"):
     NAME = NAME + ": Non-commercial / Evaluation Version"
 
+os.environ["PATH"] = os.environ.get("PATH", "") + ":%s" % os.path.dirname(sys.argv[0])
+
 
 class _App:
     #########################################################################
