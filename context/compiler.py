@@ -35,11 +35,7 @@ def set_status(text):
     sys.stdout.flush()
 
 
-def compile_log(log_file, database_file, set_status=set_status, append=False):
-    if not append and os.path.exists(database_file):
-        os.unlink(database_file)
-    db = sqlite3.connect(database_file)
-    c = db.cursor()
+def create_tables(c):
     c.execute("""
         CREATE TABLE IF NOT EXISTS cbtv_events(
             id integer primary key,
@@ -58,6 +54,14 @@ def compile_log(log_file, database_file, set_status=set_status, append=False):
             thread varchar(32) not null
         );
     """)
+
+
+def compile_log(log_file, database_file, set_status=set_status, append=False):
+    if not append and os.path.exists(database_file):
+        os.unlink(database_file)
+    db = sqlite3.connect(database_file)
+    c = db.cursor()
+    create_tables(c)
 
     thread_names = list(c.execute("SELECT node, process, thread FROM cbtv_threads ORDER BY id"))
     thread_stacks = []
