@@ -8,7 +8,8 @@
 *.cbin
 context.*log
 context.spec
-ctx_ver.*
+version.*
+context/viewer/images.py
 
 pyinstaller-*/
 build/
