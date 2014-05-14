@@ -32,6 +32,7 @@ except ImportError:
     have_ttk = False
 
 from optparse import OptionParser
+from base64 import b64decode
 import subprocess
 import ConfigParser
 import datetime
@@ -120,7 +121,7 @@ class _App:
                 scroll['command'] = tx.yview
                 scroll.pack(side=RIGHT, fill=Y, expand=1)
                 tx.pack(fill=BOTH, expand=1)
-                tx.insert("0.0", data.README.replace("\r", ""))
+                tx.insert("0.0", b64decode(data.README).replace("\r", ""))
                 tx.configure(state="disabled")
                 tx.focus_set()
                 win_center(t)
@@ -138,7 +139,7 @@ class _App:
                 scroll['command'] = tx.yview
                 scroll.pack(side=RIGHT, fill=Y, expand=1)
                 tx.pack(fill=BOTH, expand=1)
-                tx.insert("0.0", data.LICENSE.replace("\r", ""))
+                tx.insert("0.0", b64decode(data.LICENSE).replace("\r", ""))
                 tx.configure(state="disabled")
                 tx.focus_set()
                 win_center(t)
