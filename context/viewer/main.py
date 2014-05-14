@@ -47,7 +47,7 @@ except ImportError as ie:
 from context.types import Event
 from context.viewer.cbtk import set_icon, win_center, resource
 from context.viewer.util import conditional, gen_colour, shrink
-import context.viewer.images as images
+import context.viewer.data as data
 
 
 NAME = "Context"
@@ -120,7 +120,7 @@ class _App:
                 scroll['command'] = tx.yview
                 scroll.pack(side=RIGHT, fill=Y, expand=1)
                 tx.pack(fill=BOTH, expand=1)
-                tx.insert("0.0", file(resource("docs/README.txt")).read().replace("\r", ""))
+                tx.insert("0.0", data.README.replace("\r", ""))
                 tx.configure(state="disabled")
                 tx.focus_set()
                 win_center(t)
@@ -138,7 +138,7 @@ class _App:
                 scroll['command'] = tx.yview
                 scroll.pack(side=RIGHT, fill=Y, expand=1)
                 tx.pack(fill=BOTH, expand=1)
-                tx.insert("0.0", file(resource("docs/LICENSE.txt")).read().replace("\r", ""))
+                tx.insert("0.0", data.LICENSE.replace("\r", ""))
                 tx.configure(state="disabled")
                 tx.focus_set()
                 win_center(t)
@@ -268,11 +268,11 @@ class _App:
         self.render_cutoff.trace_variable("w", lambda *x: conditional(self.render_auto, self.render))
         self.scale.trace_variable("w", lambda *x: conditional(self.render_auto, self.render))
 
-        self.img_start = PhotoImage(data=images.start)
-        self.img_prev = PhotoImage(data=images.prev)
-        self.img_next = PhotoImage(data=images.next)
-        self.img_end = PhotoImage(data=images.end)
-        self.img_logo = PhotoImage(data=images.context_name)
+        self.img_start = PhotoImage(data=data.start)
+        self.img_prev = PhotoImage(data=data.prev)
+        self.img_next = PhotoImage(data=data.next)
+        self.img_end = PhotoImage(data=data.end)
+        self.img_logo = PhotoImage(data=data.context_name)
 
         self.h = Scrollbar(master, orient=HORIZONTAL)
         self.v = Scrollbar(master, orient=VERTICAL)

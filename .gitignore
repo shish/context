@@ -3,13 +3,14 @@
 *.swp
 *.o
 *.log
+*.un~
 
 *.ctxt
 *.cbin
 context.*log
 context.spec
 version.*
-context/viewer/images.py
+context/viewer/data.py
 
 pyinstaller-*/
 build/

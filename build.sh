@@ -81,7 +81,7 @@ rsvg-convert -a -w 256 images/context-name.svg -o images/context-name.png >> bui
 convert -background white -bordercolor white -border 15x5 images/context-name.png images/context-name.gif >> build.log
 svg2icon tools-icon >> build.log
 svg2icon context-icon >> build.log
-python compile-images.py > context/viewer/images.py
+python compile-data.py > context/viewer/data.py
 echo "Built static files"
 
 echo "Building demo"
