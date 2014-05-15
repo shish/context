@@ -56,6 +56,21 @@ def create_tables(c):
     """)
 
 
+def progress_file(log_file):
+    fp = open(log_file)
+    fp.seek(0, 2)
+    f_size = fp.tell()
+    fp.seek(0, 0)
+    timestamp = 0
+    for n, line in enumerate(fp):
+        if n % 10000 == 0:
+            time_taken = time() - timestamp
+            set_status("Imported %d events (%d%%, %d/s)" % (n, fp.tell() * 100.0 / f_size, 1000/time_taken))
+            timestamp = time()
+        yield n, line
+    fp.close()
+
+
 def compile_log(log_file, database_file, set_status=set_status, append=False):
     if not append and os.path.exists(database_file):
         os.unlink(database_file)
@@ -66,19 +81,9 @@ def compile_log(log_file, database_file, set_status=set_status, append=False):
     thread_names = list(c.execute("SELECT node, process, thread FROM cbtv_threads ORDER BY id"))
     thread_stacks = []
 
-    fp = open(log_file)
-    fp.seek(0, 2)
-    f_size = fp.tell()
-    fp.seek(0, 0)
-    first_event_start = 0
     events = []
-    timestamp = time()
-    for n, line in enumerate(fp):
-        if n % 10000 == 0:
-            time_taken = time() - timestamp
-            set_status("Imported %d events (%d%%, %d/s)" % (n, fp.tell() * 100.0 / f_size, 1000/time_taken))
-            timestamp = time()
-
+    first_event_start = 0
+    for n, line in progress_file(log_file):
         e = LogEvent(line.decode("utf-8"))
 
         thread_name = e.thread_id()
@@ -118,7 +123,6 @@ def compile_log(log_file, database_file, set_status=set_status, append=False):
                 events = []
     if events:
         store(c, events)
-    fp.close()
 
     c.execute("DELETE FROM cbtv_threads")
     for idx, thr in enumerate(thread_names):
