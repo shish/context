@@ -24,7 +24,10 @@ class Event(object):
         "start_time", "end_time",
         "start_type", "end_type",
         "start_text", "end_text",
+
+        "text", "length",
     ]
+    
     def __init__(self, row):
         (
             self.id,
@@ -34,4 +37,10 @@ class Event(object):
             self.start_type, self.end_type,
             self.start_text, self.end_text,
         ) = row
-        # self.node, self.process, self.thread,
+
+        if self.start_text == self.end_text or self.end_text == "":
+            self.text = self.start_text
+        else:
+            self.text = self.start_text + "\n" + self.end_text
+
+        self.length = self.end_time - self.start_time
