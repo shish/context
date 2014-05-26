@@ -18,7 +18,7 @@ try:
     from Tkinter import Tk, Toplevel
     from Tkinter import DoubleVar, IntVar
     from Tkinter import Label, Scrollbar, Text, Menu, Frame, Spinbox, PhotoImage, Listbox, Canvas, Button
-    from Tkinter import N, E, S, W, SW, NW, ALL, END, VERTICAL, HORIZONTAL, CENTER, WORD, LEFT, RIGHT, BOTH, Y
+    from Tkinter import N, E, S, W, SW, NW, SE, ALL, END, VERTICAL, HORIZONTAL, CENTER, WORD, LEFT, RIGHT, BOTH, Y
     from tkMessageBox import showerror
     from tkFileDialog import askopenfilename  # , asksaveasfilename
     have_tk = True
@@ -807,7 +807,6 @@ class _App:
             return
 
         _rs = self.render_start.get()
-        _rl = self.render_len.get()
         _rc = self.render_cutoff.get()
         _sc = self.scale.get()
 
@@ -826,9 +825,6 @@ class _App:
                 while thread_level_ends[thread_idx] and thread_level_ends[thread_idx][-1] <= event.start_time:
                     thread_level_ends[thread_idx].pop()
                 thread_level_ends[thread_idx].append(event.end_time)
-                start_px = (event.start_time - _rs) * _sc
-                end_px = (event.end_time - _rs) * _sc
-                length_px = end_px - start_px
                 stack_len = len(thread_level_ends[thread_idx]) - 1
                 if (event.end_time - event.start_time) * 1000 < _rc:
                     continue
@@ -836,10 +832,9 @@ class _App:
                 if shown == 500 and VERSION.endswith("-demo"):
                     showerror("Demo Limit", "The evaluation build is limited to showing 500 events at a time, so rendering has stopped")
                     break
-                self.show(
-                    int(start_px), int(length_px),
+                self.show_event(
+                    event, _rs, _sc,
                     thread_idx, stack_len,
-                    event
                 )
 
             elif event.start_type == "BMARK":
@@ -849,30 +844,37 @@ class _App:
                 # into a separate array?
                 pass  # render bookmark
 
+            elif event.start_type == "LOCKW" or event.start_type == "LOCKA":
+                self.show_lock(
+                    event, _rs, _sc,
+                    thread_idx,
+                )
+
         self.set_status("")
 
-    def show(self, start, length, thread, level, event):
+    def show_event(self, event, offset_time, scale_factor, thread, level):
         function = event.start_location
-        if event.start_text == event.end_text:
-            text = event.start_text
-        else:
-            text = event.start_text + "\n" + event.end_text
         ok = event.end_type == "ENDOK"
 
-        text = " " + text
-        _time_mult = float(self.scale.get()) / 1000.0
-        tip = "%dms @%dms: %s\n%s" % (float(length) / _time_mult, float(start) / _time_mult, function, text)
+        start_px = int((event.start_time - offset_time) * scale_factor)
+        length_px = int(event.length * scale_factor)
+
+        tip = "%dms @%dms: %s\n%s" % (
+            (event.end_time - event.start_time) * 1000,
+            (event.start_time - offset_time) * 1000,
+            function, event.text
+        )
 
         fill = "#CFC" if ok else "#FCC"
         outl = "#484" if ok else "#844"
         r = self.canvas.create_rectangle(
-            start, 20 + thread * ROW_HEIGHT + level * BLOCK_HEIGHT,
-            start + length, 20 + thread * ROW_HEIGHT + level * BLOCK_HEIGHT + BLOCK_HEIGHT,
+            start_px, 20 + thread * ROW_HEIGHT + level * BLOCK_HEIGHT,
+            start_px + length_px, 20 + thread * ROW_HEIGHT + level * BLOCK_HEIGHT + BLOCK_HEIGHT,
             fill=fill, outline=outl, tags="event",
         )
         t = self.canvas.create_text(
-            start, 20 + thread * ROW_HEIGHT + level * BLOCK_HEIGHT + 3,
-            text=self.truncate_text(text, length), tags="event event_label", anchor=NW, width=length,
+            start_px, 20 + thread * ROW_HEIGHT + level * BLOCK_HEIGHT + 3,
+            text=self.truncate_text(" " + event.text, length_px), tags="event event_label", anchor=NW, width=length_px,
             font="TkFixedFont",
             state="disabled",
         )
@@ -881,11 +883,32 @@ class _App:
 
         self.canvas.tag_bind(r, "<1>", lambda e: self._focus(r))
 
-        self.original_texts[t] = text
+        self.original_texts[t] = event.text
         self.tooltips[r] = tip
 
         self.canvas.tag_bind(r, "<Enter>", lambda e: self._ttip_show(r))
         self.canvas.tag_bind(r, "<Leave>", lambda e: self._ttip_hide())
+
+    def show_lock(self, event, offset_time, scale_factor, thread):
+        start_px = int((event.start_time - offset_time) * scale_factor)
+        length_px = int(event.length * scale_factor)
+
+        fill = "#FDD" if event.start_type == "LOCKW" else "#DDF"
+        r = self.canvas.create_rectangle(
+            start_px, 20 + thread * ROW_HEIGHT,
+            start_px + length_px, 20 + (thread + 1) * ROW_HEIGHT,
+            fill=fill, outline=fill, tags="lock",
+        )
+        t = self.canvas.create_text(
+            start_px + length_px, 20 + (thread + 1) * ROW_HEIGHT,
+            text=self.truncate_text(event.text, length_px),
+            tags="lock lock_label", anchor=SE, width=length_px,
+            font="TkFixedFont",
+            state="disabled",
+            fill="#888",
+        )
+        self.canvas.tag_lower(t)
+        self.canvas.tag_lower(r)
 
     def _focus(self, r):
         # scale the canvas so that the (selected item width + padding == screen width)
