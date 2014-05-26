@@ -10,7 +10,31 @@ except ImportError:
     import sqlite3
 
 
-from context.types import LogEvent
+class LogEvent(object):
+    __slots__ = [
+        "timestamp", "node", "process", "thread", "type", "location", "text",
+    ]
+
+    def __init__(self, line):
+        parts = line.strip("\n").split(" ", 6)
+        (self.timestamp, self.node, self.process, self.thread, self.type, self.location, self.text) = parts
+
+    def thread_id(self):
+        return "%s %s %s" % (self.node, self.process, self.thread)
+
+    def event_str(self):
+        return "%s %s:%s" % (self.location, self.type, self.text)
+
+    def __str__(self):
+        return self.thread_id() + " " + self.event_str()
+
+
+class Thread(object):
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+        self.stack = []
+        self.lock = None
 
 
 def set_status(text):
@@ -52,14 +76,6 @@ def progress_file(log_file):
             timestamp = time()
         yield line
     fp.close()
-
-
-class Thread(object):
-    def __init__(self, id, name):
-        self.id = id
-        self.name = name
-        self.stack = []
-        self.lock = None
 
 
 def compile_log(log_file, database_file, append=False):

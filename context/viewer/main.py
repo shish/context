@@ -44,7 +44,6 @@ try:
 except ImportError as ie:
     VERSION = "v0.0.0"
 
-from context.types import Event
 from context.viewer.cbtk import set_icon, win_center, resource
 from context.viewer.util import conditional, gen_colour, shrink
 import context.viewer.images as images
@@ -62,6 +61,35 @@ if VERSION.endswith("-demo"):
     NAME = NAME + ": Non-commercial / Evaluation Version"
 
 os.environ["PATH"] = os.environ.get("PATH", "") + ":%s" % os.path.dirname(sys.argv[0])
+
+
+class Event(object):
+    __slots__ = [
+        "id", "thread_id",
+        "start_location", "end_location",
+        "start_time", "end_time",
+        "start_type", "end_type",
+        "start_text", "end_text",
+
+        "text", "length",
+    ]
+
+    def __init__(self, row):
+        (
+            self.id,
+            self.thread_id,
+            self.start_location, self.end_location,
+            self.start_time, self.end_time,
+            self.start_type, self.end_type,
+            self.start_text, self.end_text,
+        ) = row
+
+        if self.start_text == self.end_text or self.end_text == "":
+            self.text = self.start_text
+        else:
+            self.text = self.start_text + "\n" + self.end_text
+
+        self.length = self.end_time - self.start_time
 
 
 class _App:
