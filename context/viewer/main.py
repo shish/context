@@ -366,13 +366,14 @@ class _App:
 
             if not os.path.exists(database_file):
                 needs_recompile = True
-                print("Compiled log not found, compiling")
+                set_status("Compiled log not found, compiling")
             elif os.stat(log_file).st_mtime > os.stat(database_file).st_mtime:
                 needs_recompile = True
-                print("Compiled log is out of date, recompiling")
+                set_status("Compiled log is out of date, recompiling")
 
             if needs_recompile:
-                self.compiler = subprocess.Popen(["context-compiler", log_file, "-o", database_file], stdout=subprocess.PIPE)
+                #self.compiler = subprocess.Popen(["context-compiler", log_file, "-o", database_file], stdout=subprocess.PIPE)
+                self.compiler = subprocess.Popen(["context-compiler", log_file], stdout=subprocess.PIPE)
                 while True:
                     line = self.compiler.stdout.readline()
                     if line:
