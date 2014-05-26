@@ -13,23 +13,6 @@ except ImportError:
 from context.types import LogEvent
 
 
-def store(c, events):
-    c.executemany(
-        """
-        INSERT INTO cbtv_events(
-            thread_id,
-            start_location, start_time, start_type, start_text,
-            end_location, end_time, end_type, end_text
-        )
-        VALUES(
-            ?,
-            ?, ?, ?, ?,
-            ?, ?, ?, ?
-        )
-        """, events
-    )
-
-
 def set_status(text):
     sys.stdout.write(text + "\n")
     sys.stdout.flush()
@@ -71,74 +54,96 @@ def progress_file(log_file):
     fp.close()
 
 
-def compile_log(log_file, database_file, set_status=set_status, append=False):
+class Thread(object):
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+        self.stack = []
+        self.lock = None
+
+
+def compile_log(log_file, database_file, append=False):
     if not append and os.path.exists(database_file):
         os.unlink(database_file)
     db = sqlite3.connect(database_file)
     c = db.cursor()
     create_tables(c)
 
-    thread_names = list(c.execute("SELECT node, process, thread FROM cbtv_threads ORDER BY id"))
-    thread_stacks = []
+    thread_name_to_id = {}
+    #thread_names = list(c.execute("SELECT node, process, thread FROM cbtv_threads ORDER BY id"))
+    threads = []
+    thread_count = 0
 
-    events = []
+    sqlInsertBookmark = """
+        INSERT INTO cbtv_events(thread_id, start_location, start_time, start_type, start_text)
+        VALUES(?, ?, ?, ?, ?)
+    """
+    sqlInsertEvent = """
+        INSERT INTO cbtv_events(
+            thread_id,
+            start_location, start_time, start_type, start_text,
+            end_location, end_time, end_type, end_text
+        )
+        VALUES(
+            ?,
+            ?, ?, ?, ?,
+            ?, ?, ?, ?
+        )
+    """
+
     first_event_start = 0
     for line in progress_file(log_file):
         e = LogEvent(line.decode("utf-8"))
 
         thread_name = e.thread_id()
-        if thread_name not in thread_names:
-            thread_names.append(thread_name)
-            thread_stacks.append([])
-        thread_id = thread_names.index(thread_name)
+        if thread_name not in thread_name_to_id:
+			threads.append(Thread(thread_count, thread_name))
+			thread_name_to_id[thread_name] = thread_count
+			thread_count += 1
+        thread = threads[thread_name_to_id[thread_name]]
 
         if first_event_start == 0:
             first_event_start = e.timestamp
 
-        if e.type == "BMARK":
-            c.execute(
-                """
-                INSERT INTO cbtv_events(thread_id, start_location, start_time, start_type, start_text)
-                VALUES(?, ?, ?, ?, ?)
-                """,
-                (thread_id, e.location, e.timestamp, e.type, e.text)
-            )
-
         if e.type == "START":
-            thread_stacks[thread_id].append(e)
+            thread.stack.append(e)
 
         if e.type == "ENDOK" or e.type == "ENDER":
-            try:
-                s = thread_stacks[thread_id].pop()
-            except IndexError:
-                # the log started with an END
-                continue
-            events.append((
-                    thread_id,
-                    s.location, s.timestamp, s.type, s.text,
-                    e.location, e.timestamp, e.type, e.text,
-                ))
-            if len(events) == 1000:
-                store(c, events)
-                events = []
-    if events:
-        store(c, events)
+            if len(thread.stack) > 0:
+                s = thread.stack.pop()
+                c.execute(
+                    sqlInsertEvent, (
+                        thread.id,
+                        s.location, s.timestamp, s.type, s.text,
+                        e.location, e.timestamp, e.type, e.text,
+                    )
+                )
+
+        if e.type == "BMARK":
+            c.execute(
+                sqlInsertBookmark,
+                (thread.id, e.location, e.timestamp, e.type, e.text)
+            )
 
     c.execute("DELETE FROM cbtv_threads")
-    for idx, thr in enumerate(thread_names):
-        (node, process, thread) = thr.split()
+    for idx, thread in enumerate(threads):
+        (node, process, osthread) = thread.name.split()
         c.execute("""
             INSERT INTO cbtv_threads(id, node, process, thread)
             VALUES(?, ?, ?, ?)
-        """, (idx, node, process, thread))
+        """, (idx, node, process, osthread))
 
     set_status("Indexing bookmarks...")
 
-    c.execute("CREATE INDEX IF NOT EXISTS idx_start_type_time ON cbtv_events(start_type, start_time)")  # searching for bookmarks
+    c.execute("""
+        CREATE INDEX IF NOT EXISTS idx_start_type_time ON cbtv_events(start_type, start_time)
+    """)  # searching for bookmarks
 
     set_status("Indexing events...")
 
-    c.execute("CREATE VIRTUAL TABLE cbtv_events_index USING rtree(id, start_time, end_time)")
+    c.execute("""
+        CREATE VIRTUAL TABLE cbtv_events_index USING rtree(id, start_time, end_time)
+    """)
     c.execute("""
         INSERT INTO cbtv_events_index
         SELECT id, start_time-?, end_time-?
