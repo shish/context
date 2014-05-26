@@ -67,7 +67,7 @@ def progress_file(log_file):
             time_taken = time() - timestamp
             set_status("Imported %d events (%d%%, %d/s)" % (n, fp.tell() * 100.0 / f_size, 1000/time_taken))
             timestamp = time()
-        yield n, line
+        yield line
     fp.close()
 
 
@@ -83,7 +83,7 @@ def compile_log(log_file, database_file, set_status=set_status, append=False):
 
     events = []
     first_event_start = 0
-    for n, line in progress_file(log_file):
+    for line in progress_file(log_file):
         e = LogEvent(line.decode("utf-8"))
 
         thread_name = e.thread_id()
