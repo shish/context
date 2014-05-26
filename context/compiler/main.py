@@ -125,6 +125,34 @@ def compile_log(log_file, database_file, append=False):
                 (thread.id, e.location, e.timestamp, e.type, e.text)
             )
 
+        # begin blocking wait for lock
+        if e.type == "LOCKW":
+            thread.lock = e
+
+        # end blocking wait (if there is one) and aquire lock
+        if e.type == "LOCKA":
+            if thread.lock:
+                s = thread.lock
+                c.execute(
+                    sqlInsertEvent, (
+                    thread.id,
+                    s.location, s.timestamp, s.type, s.text,
+                    e.location, e.timestamp, e.type, e.text
+                ))
+                thread.lock = None
+            thread.lock = e
+
+        # release the lock which was aquired
+        if e.type == "LOCKR":
+            s = thread.lock
+            c.execute(
+                sqlInsertEvent, (
+                thread.id,
+                s.location, s.timestamp, s.type, s.text,
+                e.location, e.timestamp, e.type, e.text
+            ))
+            thread.lock = None
+
     c.execute("DELETE FROM cbtv_threads")
     for idx, thread in enumerate(threads):
         (node, process, osthread) = thread.name.split()
