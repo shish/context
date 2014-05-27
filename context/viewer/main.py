@@ -665,10 +665,10 @@ class _App:
                     ev_s + (ev_l * float(self._scrubber_data_point + 1) / len(self.sc_activity))
                 )
                 self._scrubber_data_point = self._scrubber_data_point + 1
-                if self._scrubber_data_point % 50 == 0:
+                if self._scrubber_data_point % 10 == 0:
                     self.render_scrubber_activity(self._scrubber_data_point)
                     self.render_scrubber_arrow()
-                self.master.after(10, task)
+                self.master.after(2, task)
             task()
 
     def render(self):
