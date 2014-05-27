@@ -569,6 +569,7 @@ class _App:
         if n != 1:
             self.soft_scale *= n
             self.canvas.scale("event", 0, 0, n, 1)
+            self.canvas.scale("lock", 0, 0, n, 1)
             for t in self.canvas.find_withtag("time_label"):
                 val = self.canvas.itemcget(t, 'text')[2:]
                 self.canvas.itemconfigure(t, text=" +%.4f" % (float(val) / n))
@@ -577,7 +578,7 @@ class _App:
             for t in self.canvas.find_withtag("event_label"):
                 self.canvas.itemconfigure(t, width=float(self.canvas.itemcget(t, 'width')) * n)  # this seems slow? sure something similar was faster...
                 w = int(self.canvas.itemcget(t, 'width'))
-                tx = self.truncate_text(self.original_texts[t], w)
+                tx = self.truncate_text(" " + self.original_texts[t], w)
                 self.canvas.itemconfigure(t, text=tx)  # this seems slow? sure something similar was faster...
             self.canvas.delete("grid")
             self.render_base()
