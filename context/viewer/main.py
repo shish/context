@@ -72,7 +72,7 @@ class Event(object):
         "start_type", "end_type",
         "start_text", "end_text",
 
-        "text", "length",
+        "text", "length", "count",
     ]
 
     def __init__(self, row):
@@ -85,12 +85,34 @@ class Event(object):
             self.start_text, self.end_text,
         ) = row
 
-        if self.start_text == self.end_text or self.end_text == "":
-            self.text = self.start_text
-        else:
-            self.text = self.start_text + "\n" + self.end_text
+        self.count = 1
 
-        self.length = self.end_time - self.start_time
+    def can_merge(self, other, threshold):
+        return (
+            other.start_time - self.end_time < 0.001 and
+            other.length < threshold and
+            other.start_text == self.start_text
+        )
+
+    def merge(self, other):
+        self.end_time = other.end_time
+        self.count += 1
+
+    @property
+    def text(self):
+        if self.start_text == self.end_text or self.end_text == "":
+            text = self.start_text
+        else:
+            text = self.start_text + "\n" + self.end_text
+
+        if self.count > 1:
+            text = "%d x %s" % (self.count, text)
+
+        return text
+
+    @property
+    def length(self):
+        return self.end_time - self.start_time
 
 
 class _App:
@@ -172,19 +194,17 @@ class _App:
                 tx.focus_set()
                 win_center(t)
 
-            helpmenu = Menu(menubar, tearoff=0)
-            helpmenu.add_command(label="About", command=show_about)
-            helpmenu.add_command(label="Documentation", command=show_docs)
-            helpmenu.add_command(label="License", command=show_license)
-            return helpmenu
+            menu = Menu(menubar, tearoff=0)
+            menu.add_command(label="About", command=show_about)
+            menu.add_command(label="Documentation", command=show_docs)
+            menu.add_command(label="License", command=show_license)
+            return menu
         menubar.add_cascade(label="Help", menu=help_menu())
-
-        master.config(menu=menubar)
 
         return menubar
 
     def __control_box(self, master):
-        f = Frame(master)
+        f = None
 
         def _la(t):
             Label(f,
@@ -197,43 +217,98 @@ class _App:
                 textvariable=v, width=w
             ).pack(side="left")
 
-        def _bu(t, c):
-            if isinstance(t, PhotoImage):
-                if have_ttk:
-                    Button(f,
-                        image=t, command=c, padding=0
-                    ).pack(side="right")
-                else:
-                    Button(f,
-                        image=t, command=c,
-                    ).pack(side="right")
-            else:
-                if have_ttk:
-                    Button(f,
-                        text=t, command=c, padding=0
-                    ).pack(side="right", fill=Y)
-                else:
-                    Button(f,
-                        text=t, command=c,
-                    ).pack(side="right", fill=Y)
-
+        f = Frame(master)
         _la("  Start ")
         _sp(0, int(time.time()), 10, self.render_start, 15)
         _la("  Seconds ")
         _sp(MIN_SEC, MAX_SEC, 1, self.render_len, 3)
         _la("  Pixels per second ")
         _sp(MIN_PPS, MAX_PPS, 100, self.scale, 5)
+
         _la("  Cutoff (ms) ")
         _sp(0, 1000, 1, self.render_cutoff, 3)
-        Button(f, text="Render", command=self.update).pack(side=LEFT)  # padding=0
-
-        _bu(self.img_end, self.end_event)
-        _bu(self.img_next, self.next_event)
-        _bu("Bookmarks", self.open_bookmarks)
-        _bu(self.img_prev, self.prev_event)
-        _bu(self.img_start, self.start_event)
+        _la("  Coalesce (ms) ")
+        _sp(0, 1000, 1, self.coalesce_threshold, 3)
+        Button(f, text="Render", command=self.update).pack(side=LEFT, fill=Y)  # padding=0
 
         f.pack()
+        return f
+
+    def __bookmarks(self, master):
+        panel = Frame(master)
+        panel.grid_rowconfigure(0, weight=1)
+
+        bookmarks = Frame(panel)
+        bookmarks.grid_columnconfigure(0, weight=1)
+        bookmarks.grid_rowconfigure(0, weight=1)
+
+        li = Listbox(bookmarks, width=40)
+        li.grid(column=0, row=0, sticky=(N, E, S, W))
+        self.bookmarks_list = li
+
+        sb = Scrollbar(bookmarks, orient=VERTICAL, command=li.yview)
+        sb.grid(column=1, row=0, sticky=(N, S))
+
+        li.config(yscrollcommand=sb.set)
+        def _lbox_selected(*args):
+            selected_idx = int(li.curselection()[0])
+            self.render_start.set(self.bookmarks_values[selected_idx])
+            self.canvas.xview_moveto(0)
+            if not self.render_auto.get():
+                self.update()
+        li.bind('<Double-Button-1>', _lbox_selected)
+        bookmarks.grid(column=0, row=0, sticky=(N, E, S, W))
+
+        buttons = Frame(panel)
+        Button(buttons, image=self.img_start, command=self.start_event).pack(side="left")
+        Button(buttons, image=self.img_prev, command=self.prev_event).pack(side="left")
+        Button(buttons, image=self.img_end, command=self.end_event).pack(side="right")
+        Button(buttons, image=self.img_next, command=self.next_event).pack(side="right")
+        buttons.grid(column=0, row=1, sticky=(E, W))
+
+        return panel
+
+    def __canvas(self, master):
+        f = Frame(master)
+        f.grid_columnconfigure(0, weight=1)
+        f.grid_rowconfigure(0, weight=1)
+
+        h = Scrollbar(f, orient=HORIZONTAL)
+        v = Scrollbar(f, orient=VERTICAL)
+        canvas = Canvas(
+            f,
+            background="white",
+            xscrollcommand=h.set,
+            yscrollcommand=v.set,
+        )
+        h['command'] = canvas.xview
+        v['command'] = canvas.yview
+
+        canvas.bind("<4>", lambda e: self.scale_view(e, 1.0 * 1.1))
+        canvas.bind("<5>", lambda e: self.scale_view(e, 1.0 / 1.1))
+
+        # in windows, mouse wheel events always go to the root window o_O
+        self.master.bind("<MouseWheel>", lambda e: self.scale_view(e,
+            ((1.0 * 1.1) if e.delta > 0 else (1.0 / 1.1))
+        ))
+
+        # Drag based movement
+        # def _sm(e):
+        #    self.st = self.render_start.get()
+        #    self.sx = e.x
+        #    self.sy = e.y
+        # def _cm(e):
+        #    self.render_start.set(self.st + float(self.sx - e.x)/self.scale.get())
+        #    self.render()
+        # self.canvas.bind("<1>", _sm)
+        # self.canvas.bind("<B1-Motion>", _cm)
+
+        canvas.grid(column=0, row=0, sticky=(N, W, E, S))
+        v.grid(column=1, row=0, sticky=(N, S))
+        h.grid(column=0, row=1, sticky=(W, E))
+
+        self.canvas = canvas
+
         return f
 
     def __scrubber(self, master):
@@ -265,16 +340,19 @@ class _App:
 
     def __init__(self, master, database_file):
         self.master = master
+        self.bookmarks_values = []
+        self.bookmarks_list = None
+        self.canvas = None
+        self.scrubber = None  # render is called before init finished?
+
         self.char_w = -1
         self.soft_scale = 1.0
         self.window_ready = False
         self.data = []
-        self.scrubber = None  # render is called before init finished?
         self.sc_activity = None
         self.event_idx_offset = 0
         self._last_log_dir = os.path.expanduser("~/")
         self.c = None  # database connection
-        self.compiler = None
 
         try:
             os.makedirs(os.path.expanduser(os.path.join("~", ".config")))
@@ -286,6 +364,7 @@ class _App:
         self.render_start = DoubleVar(master, 0)
         self.render_len = IntVar(master, 10)
         self.render_cutoff = IntVar(master, 1)
+        self.coalesce_threshold = IntVar(master, 1)
         self.render_auto = IntVar(master, 1)
         self.scale = IntVar(master, 1000)
 
@@ -295,6 +374,7 @@ class _App:
         self.render_start.trace_variable("w", lambda *x: conditional(self.render_auto, self.update))
         self.render_len.trace_variable("w", lambda *x: conditional(self.render_auto, self.update))
         self.render_cutoff.trace_variable("w", lambda *x: conditional(self.render_auto, self.render))
+        self.coalesce_threshold.trace_variable("w", lambda *x: conditional(self.render_auto, self.update))
         self.scale.trace_variable("w", lambda *x: conditional(self.render_auto, self.render))
 
         self.img_start = PhotoImage(data=data.start)
@@ -303,55 +383,30 @@ class _App:
         self.img_end = PhotoImage(data=data.end)
         self.img_logo = PhotoImage(data=data.context_name)
 
-        self.h = Scrollbar(master, orient=HORIZONTAL)
-        self.v = Scrollbar(master, orient=VERTICAL)
-        self.canvas = Canvas(
-            master,
-            width=800, height=600,
-            background="white",
-            xscrollcommand=self.h.set,
-            yscrollcommand=self.v.set,
-        )
-        self.h['command'] = self.canvas.xview
-        self.v['command'] = self.canvas.yview
-
-        self.controls = self.__control_box(master)
-        self.menu = self.__menu(master)
+        menu = self.__menu(master)
+        controls_panel = self.__control_box(master)
+        bookmarks_panel = self.__bookmarks(master)
+        canvas_panel = self.__canvas(master)
+        scrubber = self.__scrubber(master)
+        status = Label(master, text="")
         if have_ttk:
-            self.grip = Sizegrip(master)
-        self.scrubber = self.__scrubber(master)
-        self.status = Label(master, text="")
+            grip = Sizegrip(master)
+        else:
+            grip = Label(master, text="")
 
-        master.grid_columnconfigure(0, weight=1)
+        master.grid_columnconfigure(1, weight=1)
         master.grid_rowconfigure(1, weight=1)
-        self.controls.grid(column=0, row=0, sticky=(W, E), columnspan=2)
-        self.canvas.grid(column=0, row=1, sticky=(N, W, E, S))
-        self.v.grid(column=1, row=1, sticky=(N, S))
-        self.h.grid(column=0, row=2, sticky=(W, E))
-        self.scrubber.grid(column=0, row=3, sticky=(W, E), columnspan=2)
-        self.status.grid(column=0, row=4, sticky=(W, E))
-        if have_ttk:
-            self.grip.grid(column=1, row=4, sticky=(S, E))
 
-        self.canvas.bind("<4>", lambda e: self.scale_view(e, 1.0 * 1.1))
-        self.canvas.bind("<5>", lambda e: self.scale_view(e, 1.0 / 1.1))
+        master.config(menu=menu)
+        controls_panel.grid(column=0, row=0, sticky=(W, E), columnspan=2)
+        bookmarks_panel.grid(column=0, row=1, sticky=(N, W, E, S))
+        canvas_panel.grid(column=1, row=1, sticky=(N, E, S, W))
+        scrubber.grid(column=0, row=2, sticky=(W, E), columnspan=2)
+        status.grid(column=0, row=3, sticky=(W, E))
+        grip.grid(column=1, row=3, sticky=(S, E))
 
-        # in windows, mouse wheel events always go to the root window o_O
-        self.master.bind("<MouseWheel>", lambda e: self.scale_view(e,
-            ((1.0 * 1.1) if e.delta > 0 else (1.0 / 1.1))
-        ))
-
-        # Drag based movement
-        # def _sm(e):
-        #    self.st = self.render_start.get()
-        #    self.sx = e.x
-        #    self.sy = e.y
-        # def _cm(e):
-        #    self.render_start.set(self.st + float(self.sx - e.x)/self.scale.get())
-        #    self.render()
-        # self.canvas.bind("<1>", _sm)
-        # self.canvas.bind("<B1-Motion>", _cm)
-
+        self.scrubber = scrubber
+        self.status = status
         self.master.update()
 
         self.window_ready = True
@@ -367,7 +422,11 @@ class _App:
 
     def open_file(self):
         filename = askopenfilename(
-            filetypes=[("All Supported Types", "*.ctxt *.cbin"), ("Context Text", "*.ctxt"), ("Context Binary", "*.cbin")],
+            filetypes=[
+                ("All Supported Types", "*.ctxt *.cbin"),
+                ("Context Text", "*.ctxt"),
+                ("Context Binary", "*.cbin")
+            ],
             initialdir=self._last_log_dir
         )
         if filename:
@@ -401,16 +460,17 @@ class _App:
                 self.set_status("Compiled log is out of date, recompiling")
 
             if needs_recompile:
-                #self.compiler = subprocess.Popen(["context-compiler", log_file, "-o", database_file], stdout=subprocess.PIPE)
-                self.compiler = subprocess.Popen(["context-compiler", log_file], stdout=subprocess.PIPE)
+                compiler = subprocess.Popen(["context-compiler", log_file], stdout=subprocess.PIPE)
                 while True:
-                    line = self.compiler.stdout.readline()
+                    line = compiler.stdout.readline()
                     if line:
                         self.set_status(line.strip())
                     else:
                         break
 
         self.c = sqlite3.connect(database_file)
+
+        self.load_bookmarks()
 
         try:
             self.c.execute("SELECT * FROM cbtv_events LIMIT 1")
@@ -425,11 +485,18 @@ class _App:
             in self.c.execute("SELECT node, process, thread FROM cbtv_threads ORDER BY id")
         ]
 
-        self.event_idx_offset = self.get_earliest_bookmark_after(0)
-
         self.master.title(NAME + ": " + database_file)
 
-        self.render_start.set(self.get_earliest_bookmark_after(0))
+        self.event_idx_offset = self.get_earliest_bookmark_after(0)
+        self.render_start.set(self.event_idx_offset)
+
+    def load_bookmarks(self):
+        self.bookmarks_values = []
+        self.bookmarks_list.delete(0, END)
+        for ts, tx, et in self.c.execute("SELECT start_time, start_text, end_text FROM cbtv_events WHERE start_type = 'BMARK' ORDER BY start_time"):
+            tss = datetime.datetime.fromtimestamp(ts).strftime("%Y/%m/%d %H:%M:%S")  # .%f
+            self.bookmarks_values.append(ts)
+            self.bookmarks_list.insert(END, "%s: %s" % (tss, tx or et))
 
     def load_settings(self):
         try:
@@ -442,6 +509,8 @@ class _App:
                     self.scale.set(cp.getint("gui", "scale"))
                 if cp.has_option("gui", "render_cutoff"):
                     self.render_cutoff.set(cp.getint("gui", "render_cutoff"))
+                if cp.has_option("gui", "coalesce_threshold"):
+                    self.coalesce_threshold.set(cp.getint("gui", "coalesce_threshold"))
                 if cp.has_option("gui", "render_auto"):
                     self.render_auto.set(cp.getint("gui", "render_auto"))
                 if cp.has_option("gui", "last_log_dir"):
@@ -456,6 +525,7 @@ class _App:
             cp.set("gui", "render_len", str(self.render_len.get()))
             cp.set("gui", "scale", str(self.scale.get()))
             cp.set("gui", "render_cutoff", str(self.render_cutoff.get()))
+            cp.set("gui", "coalesce_threshold", str(self.coalesce_threshold.get()))
             cp.set("gui", "render_auto", str(self.render_auto.get()))
             cp.set("gui", "last_log_dir", self._last_log_dir)
             cp.write(file(self.config_file, "w"))
@@ -506,41 +576,6 @@ class _App:
         if next_ts:
             self.render_start.set(next_ts)
         self.canvas.xview_moveto(0)
-
-    def open_bookmarks(self):
-        # base gui
-        t = Toplevel(self.master)
-        t.lift(self.master)
-        t.grid_columnconfigure(0, weight=1)
-        t.grid_rowconfigure(0, weight=1)
-        t.transient(self.master)
-        t.title("Bookmarks")
-
-        li = Listbox(t, height=10, width=40)
-        li.grid(column=0, row=0, sticky=(N, E, S, W))
-
-        sb = Scrollbar(t, orient=VERTICAL, command=li.yview)
-        sb.grid(column=1, row=0, sticky=(N, S))
-
-        li.config(yscrollcommand=sb.set)
-
-        # render the laid out window before adding data;
-        # the alternative is rendering the non-laid-out window
-        t.update()
-
-        # load data
-        bm_values = []
-        for ts, tx, et in self.c.execute("SELECT start_time, start_text, end_text FROM cbtv_events WHERE start_type = 'BMARK' ORDER BY start_time"):
-            bm_values.append(ts)
-            tss = datetime.datetime.fromtimestamp(ts).strftime("%Y/%m/%d %H:%M:%S")  # .%f
-            li.insert(END, "%s: %s" % (tss, tx or et))
-
-        # load events
-        def _lbox_selected(*args):
-            selected_idx = int(li.curselection()[0])
-            self.render_start.set(bm_values[selected_idx])
-            self.canvas.xview_moveto(0)
-        li.bind('<Double-Button-1>', _lbox_selected)
 
     #########################################################################
     # Rendering
@@ -608,11 +643,13 @@ class _App:
         try:
             s = self.render_start.get()
             e = self.render_start.get() + self.render_len.get()
+            threshold = float(self.coalesce_threshold.get()) / 1000.0
         except ValueError:
             return
 
         try:
             self.n = 0
+            self.data = []  # free memory
 
             def progress(*args):
                 try:
@@ -624,7 +661,8 @@ class _App:
             self.c.set_progress_handler(progress, 10000)
 
             try:
-                self.data = [Event(row) for row in self.c.execute(
+                last_event_for_thread = [None, ] * len(self.threads)
+                for row in self.c.execute(
                     """
                         SELECT *
                         FROM cbtv_events
@@ -633,9 +671,19 @@ class _App:
                         ORDER BY start_time ASC, end_time DESC
                     """,
                     (s - self.event_idx_offset, e - self.event_idx_offset, self.render_cutoff.get())
-                )]
+                ):
+                    event = Event(row)
+                    if (
+                        threshold and
+                        last_event_for_thread[event.thread_id] and
+                        last_event_for_thread[event.thread_id].can_merge(event, threshold)
+                    ):
+                        self.data[-1].merge(event)
+                    else:
+                        last_event_for_thread[event.thread_id] = event
+                        self.data.append(event)
             except sqlite3.OperationalError:
-                self.data = []
+                pass
 
             self.c.set_progress_handler(None, 0)
         finally:
@@ -676,6 +724,8 @@ class _App:
         """
         Render settings changed, re-render with existing data
         """
+        if not self.window_ready:
+            return
         if not MIN_PPS < self.scale.get() < MAX_PPS:
             return
         self.soft_scale = 1.0
@@ -810,7 +860,6 @@ class _App:
         """
         Render grid lines and markers
         """
-        _rs = self.render_start.get()
         _rl = self.render_len.get()
         _sc = self.scale.get() * self.soft_scale
 
@@ -841,7 +890,7 @@ class _App:
         _sc = self.scale.get()
 
         # thread_level_starts = [[], ] * len(self.threads)  # this bug is subtle and hilarious
-        thread_level_ends = [[] for n in range(len(self.threads))]
+        thread_level_ends = [[] for _ in range(len(self.threads))]
 
         event_count = len(self.data) - 1
         shown = 0
@@ -985,7 +1034,7 @@ def main(argv=sys.argv):
     filename = None
 
     parser = OptionParser()
-    parser.add_option("-g", "--geometry", dest="geometry", default="770x600",
+    parser.add_option("-g", "--geometry", dest="geometry", default="1000x600",
             help="location and size of window", metavar="GM")
     parser.add_option("-r", "--row-height", dest="row_height", default=140,
             type=int, help="height of the rows", metavar="PX")
