@@ -420,6 +420,10 @@ class _App:
         self.status.config(text=text)
         self.master.update()
 
+    #########################################################################
+    # Open file
+    #########################################################################
+
     def open_file(self):
         filename = askopenfilename(
             filetypes=[
@@ -497,6 +501,10 @@ class _App:
             tss = datetime.datetime.fromtimestamp(ts).strftime("%Y/%m/%d %H:%M:%S")  # .%f
             self.bookmarks_values.append(ts)
             self.bookmarks_list.insert(END, "%s: %s" % (tss, tx or et))
+
+    #########################################################################
+    # Settings
+    #########################################################################
 
     def load_settings(self):
         try:
