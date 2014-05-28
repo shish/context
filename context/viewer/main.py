@@ -661,6 +661,8 @@ class _App:
         try:
             self.n = 0
             self.data = []  # free memory
+            # thread_level_starts = [[], ] * len(self.threads)  # this bug is subtle and hilarious
+            thread_level_ends = [[] for _ in self.threads]
 
             def progress(*args):
                 try:
@@ -672,7 +674,6 @@ class _App:
             self.c.set_progress_handler(progress, 10000)
 
             try:
-                last_event_for_thread = [None, ] * len(self.threads)
                 for row in self.c.execute(
                     """
                         SELECT *
@@ -684,15 +685,24 @@ class _App:
                     (s - self.event_idx_offset, e - self.event_idx_offset, self.render_cutoff.get())
                 ):
                     event = Event(row)
-                    if (
-                        threshold and
-                        last_event_for_thread[event.thread_id] and
-                        last_event_for_thread[event.thread_id].can_merge(event, threshold)
-                    ):
-                        self.data[-1].merge(event)
-                    else:
-                        last_event_for_thread[event.thread_id] = event
-                        self.data.append(event)
+                    thread_idx = event.thread_id
+
+                    if event.start_type == "START":
+                        prev_event_at_level = None
+                        while thread_level_ends[thread_idx] and thread_level_ends[thread_idx][-1].end_time <= event.start_time:
+                            prev_event_at_level = thread_level_ends[thread_idx].pop()
+                        event.depth = len(thread_level_ends[thread_idx])
+
+                        if (
+                            threshold and
+                            prev_event_at_level and
+                            prev_event_at_level.can_merge(event, threshold)
+                        ):
+                            prev_event_at_level.merge(event)
+                            thread_level_ends[thread_idx].append(prev_event_at_level)
+                        else:
+                            thread_level_ends[thread_idx].append(event)
+                            self.data.append(event)
             except sqlite3.OperationalError:
                 pass
 
@@ -900,9 +910,6 @@ class _App:
         _rc = self.render_cutoff.get()
         _sc = self.scale.get()
 
-        # thread_level_starts = [[], ] * len(self.threads)  # this bug is subtle and hilarious
-        thread_level_ends = [[] for _ in range(len(self.threads))]
-
         event_count = len(self.data) - 1
         shown = 0
         for n, event in enumerate(self.data):
@@ -912,10 +919,6 @@ class _App:
             thread_idx = event.thread_id
 
             if event.start_type == "START":
-                while thread_level_ends[thread_idx] and thread_level_ends[thread_idx][-1] <= event.start_time:
-                    thread_level_ends[thread_idx].pop()
-                thread_level_ends[thread_idx].append(event.end_time)
-                stack_len = len(thread_level_ends[thread_idx]) - 1
                 if (event.end_time - event.start_time) * 1000 < _rc:
                     continue
                 shown += 1
@@ -924,7 +927,7 @@ class _App:
                     break
                 self.show_event(
                     event, _rs, _sc,
-                    thread_idx, stack_len,
+                    thread_idx,
                 )
 
             elif event.start_type == "BMARK":
@@ -942,7 +945,7 @@ class _App:
 
         self.set_status("")
 
-    def show_event(self, event, offset_time, scale_factor, thread, level):
+    def show_event(self, event, offset_time, scale_factor, thread):
         function = event.start_location
         ok = event.end_type == "ENDOK"
 
@@ -958,12 +961,12 @@ class _App:
         fill = "#CFC" if ok else "#FCC"
         outl = "#484" if ok else "#844"
         r = self.canvas.create_rectangle(
-            start_px, 20 + thread * ROW_HEIGHT + level * BLOCK_HEIGHT,
-            start_px + length_px, 20 + thread * ROW_HEIGHT + level * BLOCK_HEIGHT + BLOCK_HEIGHT,
+            start_px, 20 + thread * ROW_HEIGHT + event.depth * BLOCK_HEIGHT,
+            start_px + length_px, 20 + thread * ROW_HEIGHT + event.depth * BLOCK_HEIGHT + BLOCK_HEIGHT,
             fill=fill, outline=outl, tags="event",
         )
         t = self.canvas.create_text(
-            start_px, 20 + thread * ROW_HEIGHT + level * BLOCK_HEIGHT + 3,
+            start_px, 20 + thread * ROW_HEIGHT + event.depth * BLOCK_HEIGHT + 3,
             text=self.truncate_text(" " + event.text, length_px), tags="event event_label", anchor=NW, width=length_px,
             font="TkFixedFont",
             state="disabled",
