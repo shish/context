@@ -2,7 +2,7 @@
 
 # todo:
 # full-file navigation
-# - cbtv_events logs can last for hours, but only a minute at a time is
+# - events logs can last for hours, but only a minute at a time is
 #   sensibly viewable
 
 from __future__ import print_function
@@ -472,38 +472,49 @@ class _App:
 
         self.c = sqlite3.connect(database_file)
 
-        self.load_bookmarks()
-
         try:
-            self.c.execute("SELECT * FROM cbtv_events LIMIT 1")
+            self.c.execute("SELECT version FROM settings LIMIT 1").fetchone()
         except sqlite3.OperationalError:
             showerror("Error", "'%s' is not a valid context dump" % database_file, parent=self.master)
             return
 
-        # fast because the data is split off into a tiny table
-        self.threads = [
-            "-".join([str(c) for c in r])
-            for r
-            in self.c.execute("SELECT node, process, thread FROM cbtv_threads ORDER BY id")
-        ]
+        self.data = []  # don't load the bulk of the data yet
+        self.load_bookmarks(self.c)
+        self.load_summary(self.c)
+        self.load_threads(self.c)
 
         self.master.title(NAME + ": " + database_file)
+
+        # render grid + scrubber
+        self.render()
 
         self.event_idx_offset = self.get_earliest_bookmark_after(0)
         self.render_start.set(self.event_idx_offset)
 
-    def load_bookmarks(self):
+    def load_bookmarks(self, conn):
         self.bookmarks_values = []
         self.bookmarks_list.delete(0, END)
-        for ts, tx, et in self.c.execute("""
+        for ts, tx, et in conn.execute("""
             SELECT start_time, start_text, end_text
-            FROM cbtv_events
+            FROM events
             WHERE start_type = 'BMARK'
             ORDER BY start_time
         """):
             tss = datetime.datetime.fromtimestamp(ts).strftime("%Y/%m/%d %H:%M:%S")  # .%f
             self.bookmarks_values.append(ts)
             self.bookmarks_list.insert(END, "%s: %s" % (tss, tx or et))
+
+    def load_threads(self, conn):
+        # fast because the data is split off into a tiny table
+        self.threads = [
+            "-".join([str(c) for c in r])
+            for r
+            in conn.execute("SELECT node, process, thread FROM threads ORDER BY id")
+        ]
+
+    def load_summary(self, conn):
+        self.sc_activity = [row[0] for row in conn.execute("SELECT events FROM summary ORDER BY id")]
+
 
     #########################################################################
     # Settings
@@ -554,13 +565,13 @@ class _App:
 
     def get_earliest_bookmark_after(self, start_hint=0):
         return list(self.c.execute(
-            "SELECT min(start_time) FROM cbtv_events WHERE start_time > ? AND start_type = 'BMARK'",
+            "SELECT min(start_time) FROM events WHERE start_time > ? AND start_type = 'BMARK'",
             [start_hint, ]
         ))[0][0]
 
     def get_latest_bookmark_before(self, end_hint=0):
         return list(self.c.execute(
-            "SELECT max(start_time) FROM cbtv_events WHERE start_time < ? AND start_type = 'BMARK'",
+            "SELECT max(start_time) FROM events WHERE start_time < ? AND start_type = 'BMARK'",
             [end_hint, ]
         ))[0][0]
 
@@ -591,17 +602,6 @@ class _App:
     #########################################################################
     # Rendering
     #########################################################################
-
-    def _count_events_at(self, n, m):
-        try:
-            count = self.c.execute(
-                "SELECT count(*) FROM cbtv_events_index WHERE start_time < ? AND end_time > ?",
-                (m - self.event_idx_offset, n - self.event_idx_offset)
-            ).fetchone()[0]
-            # print("Found", count ,"events at", n)
-            return count
-        except sqlite3.OperationalError:
-            return 0
 
     def scale_view(self, e=None, n=1.0):
         # get the old pos
@@ -640,7 +640,6 @@ class _App:
 
     def update(self):
         self.update_events()
-        self.update_scrubber()
         self.render()
 
     def update_events(self):
@@ -677,8 +676,8 @@ class _App:
                 for row in self.c.execute(
                     """
                         SELECT *
-                        FROM cbtv_events
-                        WHERE id IN (SELECT id FROM cbtv_events_index WHERE end_time > ? AND start_time < ?)
+                        FROM events
+                        WHERE id IN (SELECT id FROM events_index WHERE end_time > ? AND start_time < ?)
                         AND (end_time - start_time) * 1000 >= ?
                         ORDER BY start_time ASC, end_time DESC
                     """,
@@ -709,37 +708,6 @@ class _App:
             self.c.set_progress_handler(None, 0)
         finally:
             self.set_status("")
-
-    def update_scrubber(self):
-        sc = self.scrubber
-
-        if not sc:
-            return
-
-        # events start / end / length
-        ev_s = self.get_earliest_bookmark_after(0)
-        ev_e = self.get_latest_bookmark_before(sys.maxint)
-        ev_l = ev_e - ev_s
-
-        if self.sc_activity is None:
-            # self.sc_activity = [self._count_events_at(ev_s + (ev_l * float(n)/sc_w)) for n in range(0, sc_w)]
-            self.sc_activity = [0] * 1000
-
-            self._scrubber_data_point = 0
-
-            def task():
-                if self._scrubber_data_point >= len(self.sc_activity):
-                    return
-                self.sc_activity[self._scrubber_data_point] = self._count_events_at(
-                    ev_s + (ev_l * float(self._scrubber_data_point) / len(self.sc_activity)),
-                    ev_s + (ev_l * float(self._scrubber_data_point + 1) / len(self.sc_activity))
-                )
-                self._scrubber_data_point += 1
-                if self._scrubber_data_point % 10 == 0:
-                    self.render_scrubber_activity(self._scrubber_data_point)
-                    self.render_scrubber_arrow()
-                self.master.after(2, task)
-            task()
 
     def render(self):
         """
