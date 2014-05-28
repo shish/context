@@ -43,7 +43,7 @@ try:
 except ImportError as ie:
     VERSION = "v0.0.0"
 
-from context.viewer.cbtk import set_icon, win_center, resource
+from context.viewer.cbtk import set_icon, win_center
 from context.viewer.util import conditional, gen_colour, shrink
 import context.viewer.data as data
 
@@ -57,7 +57,7 @@ MIN_SEC = 1
 MAX_SEC = 600
 
 if VERSION.endswith("-demo"):
-    NAME = NAME + ": Non-commercial / Evaluation Version"
+    NAME += ": Non-commercial / Evaluation Version"
 
 os.environ["PATH"] = os.environ.get("PATH", "") + ":%s" % os.path.dirname(sys.argv[0])
 
@@ -208,15 +208,10 @@ class _App:
         f = None
 
         def _la(t):
-            Label(f,
-                text=t
-            ).pack(side="left")
+            Label(f, text=t).pack(side="left")
 
         def _sp(fr, t, i, v, w=10):
-            Spinbox(f,
-                from_=fr, to=t, increment=i,
-                textvariable=v, width=w
-            ).pack(side="left")
+            Spinbox(f, from_=fr, to=t, increment=i, textvariable=v, width=w).pack(side="left")
 
         f = Frame(master)
         _la("  Start ")
@@ -289,8 +284,8 @@ class _App:
         canvas.bind("<5>", lambda e: self.scale_view(e, 1.0 / 1.1))
 
         # in windows, mouse wheel events always go to the root window o_O
-        self.master.bind("<MouseWheel>", lambda e: self.scale_view(e,
-            ((1.0 * 1.1) if e.delta > 0 else (1.0 / 1.1))
+        self.master.bind("<MouseWheel>", lambda e: self.scale_view(
+            e, ((1.0 * 1.1) if e.delta > 0 else (1.0 / 1.1))
         ))
 
         # Drag based movement
@@ -351,6 +346,8 @@ class _App:
         self.window_ready = False
         self.data = []
         self.sc_activity = None
+        self.original_texts = {}
+        self.tooltips = {}
         self.event_idx_offset = 0
         self._last_log_dir = os.path.expanduser("~/")
         self.c = None  # database connection
@@ -498,7 +495,12 @@ class _App:
     def load_bookmarks(self):
         self.bookmarks_values = []
         self.bookmarks_list.delete(0, END)
-        for ts, tx, et in self.c.execute("SELECT start_time, start_text, end_text FROM cbtv_events WHERE start_type = 'BMARK' ORDER BY start_time"):
+        for ts, tx, et in self.c.execute("""
+            SELECT start_time, start_text, end_text
+            FROM cbtv_events
+            WHERE start_type = 'BMARK'
+            ORDER BY start_time
+        """):
             tss = datetime.datetime.fromtimestamp(ts).strftime("%Y/%m/%d %H:%M:%S")  # .%f
             self.bookmarks_values.append(ts)
             self.bookmarks_list.insert(END, "%s: %s" % (tss, tx or et))
@@ -732,7 +734,7 @@ class _App:
                     ev_s + (ev_l * float(self._scrubber_data_point) / len(self.sc_activity)),
                     ev_s + (ev_l * float(self._scrubber_data_point + 1) / len(self.sc_activity))
                 )
-                self._scrubber_data_point = self._scrubber_data_point + 1
+                self._scrubber_data_point += 1
                 if self._scrubber_data_point % 10 == 0:
                     self.render_scrubber_activity(self._scrubber_data_point)
                     self.render_scrubber_arrow()
@@ -1003,9 +1005,7 @@ class _App:
 
     def _focus(self, r):
         # scale the canvas so that the (selected item width + padding == screen width)
-        canvas_w = self.canvas.bbox("grid")[2]
         view_w = self.canvas.winfo_width()
-        rect_x = self.canvas.bbox(r)[0]
         rect_w = max(self.canvas.bbox(r)[2] - self.canvas.bbox(r)[0] + 20, 10)
         self.scale_view(n=float(view_w) / rect_w)
 
@@ -1047,14 +1047,14 @@ def main(argv=sys.argv):
 
     parser = OptionParser()
     parser.add_option("-g", "--geometry", dest="geometry", default="1000x600",
-            help="location and size of window", metavar="GM")
-    parser.add_option("-r", "--row-height", dest="row_height", default=140,
-            type=int, help="height of the rows", metavar="PX")
+                      help="location and size of window", metavar="GM")
+    parser.add_option("-t", "--thread-height", dest="thread_height", default=7,
+                      type=int, help="how many rows to show in each thread", metavar="ROWS")
     (options, args) = parser.parse_args(argv)
 
     # lol constants
     global ROW_HEIGHT
-    ROW_HEIGHT = options.row_height
+    ROW_HEIGHT = options.thread_height * BLOCK_HEIGHT
 
     if len(args) > 1:
         filename = args[1]
