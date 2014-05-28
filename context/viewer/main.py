@@ -72,7 +72,7 @@ class Event(object):
         "start_type", "end_type",
         "start_text", "end_text",
 
-        "text", "length", "count",
+        "text", "length", "count", "depth"
     ]
 
     def __init__(self, row):
@@ -86,9 +86,12 @@ class Event(object):
         ) = row
 
         self.count = 1
+        self.depth = 0
 
     def can_merge(self, other, threshold):
         return (
+            other.depth == self.depth and
+            other.thread_id == self.thread_id and
             other.start_time - self.end_time < 0.001 and
             other.length < threshold and
             other.start_text == self.start_text
