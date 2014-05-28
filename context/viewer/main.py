@@ -400,7 +400,7 @@ class _App:
         bookmarks_panel.grid(column=0, row=1, sticky=(N, W, E, S))
         canvas_panel.grid(column=1, row=1, sticky=(N, E, S, W))
         scrubber.grid(column=0, row=2, sticky=(W, E), columnspan=2)
-        status.grid(column=0, row=3, sticky=(W, E))
+        status.grid(column=0, row=3, sticky=(W, E), columnspan=2)
         grip.grid(column=1, row=3, sticky=(S, E))
 
         self.scrubber = scrubber
