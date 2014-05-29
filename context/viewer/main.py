@@ -49,8 +49,10 @@ import context.viewer.data as data
 
 
 NAME = "Context"
-ROW_HEIGHT = 140
+MAX_DEPTH = 7
 BLOCK_HEIGHT = 20
+HEADER_HEIGHT = 20
+SCRUBBER_HEIGHT = 20
 MIN_PPS = 1
 MAX_PPS = 5000
 MIN_SEC = 1
@@ -60,6 +62,19 @@ if VERSION.endswith("-demo"):
     NAME += ": Non-commercial / Evaluation Version"
 
 os.environ["PATH"] = os.environ.get("PATH", "") + ":%s" % os.path.dirname(sys.argv[0])
+
+
+def version_check(fn):
+    c = sqlite3.connect(fn)
+    ok = False
+
+    try:
+        ok = c.execute("SELECT version FROM settings LIMIT 1").fetchone()[0] == 1
+    except Exception:
+        ok = False
+
+    c.close()
+    return ok
 
 
 class Event(object):
@@ -310,7 +325,7 @@ class _App:
     def __scrubber(self, master):
         sc = Canvas(
             master,
-            width=800, height=20,
+            width=800, height=SCRUBBER_HEIGHT,
             background="white",
         )
 
@@ -460,6 +475,9 @@ class _App:
             elif os.stat(log_file).st_mtime > os.stat(database_file).st_mtime:
                 needs_recompile = True
                 self.set_status("Compiled log is out of date, recompiling")
+            elif not version_check(database_file):
+                needs_recompile = True
+                self.set_status("Compiled log is from an old version of context, recompiling")
 
             if needs_recompile:
                 compiler = subprocess.Popen(["context-compiler", log_file], stdout=subprocess.PIPE)
@@ -471,12 +489,6 @@ class _App:
                         break
 
         self.c = sqlite3.connect(database_file)
-
-        try:
-            self.c.execute("SELECT version FROM settings LIMIT 1").fetchone()
-        except sqlite3.OperationalError:
-            showerror("Error", "'%s' is not a valid context dump" % database_file, parent=self.master)
-            return
 
         self.data = []  # don't load the bulk of the data yet
         self.load_bookmarks(self.c)
@@ -734,7 +746,7 @@ class _App:
         self.canvas.configure(scrollregion=(
             0, 0,
             self.render_len.get() * self.scale.get(),
-            len(self.threads) * ROW_HEIGHT + 20
+            len(self.threads) * (MAX_DEPTH * BLOCK_HEIGHT) + HEADER_HEIGHT
         ))
         if self.char_w == -1:
             t = self.canvas.create_text(0, 0, font="TkFixedFont", text="_", anchor=NW)
@@ -760,7 +772,7 @@ class _App:
                 col = gen_colour(self.sc_activity[n], activity_peak)
                 sc.create_rectangle(
                     int(float(n) / len(self.sc_activity) * sc.winfo_width()), 1,
-                    int(float(n + 1) / len(self.sc_activity) * sc.winfo_width()), 20,
+                    int(float(n + 1) / len(self.sc_activity) * sc.winfo_width()), SCRUBBER_HEIGHT,
                     fill=col, outline=col, tags="activity",
                 )
 
@@ -807,16 +819,16 @@ class _App:
         # left edge
         sc.create_line(
             start, 1,
-            start, 20,
+            start, SCRUBBER_HEIGHT,
             fill="#000", tags="arrow",
         )
         sc.create_line(
-            start, 10,
+            start, SCRUBBER_HEIGHT/2,
             start + 5, 15,
             fill="#000", tags="arrow",
         )
         sc.create_line(
-            start, 10,
+            start, SCRUBBER_HEIGHT/2,
             start + 5, 5,
             fill="#000", tags="arrow",
         )
@@ -824,24 +836,24 @@ class _App:
         # right edge
         sc.create_line(
             end, 1,
-            end, 20,
+            end, SCRUBBER_HEIGHT,
             fill="#000", tags="arrow",
         )
         sc.create_line(
-            end, 10,
+            end, SCRUBBER_HEIGHT/2,
             end - 5, 15,
             fill="#000", tags="arrow",
         )
         sc.create_line(
-            end, 10,
+            end, SCRUBBER_HEIGHT/2,
             end - 5, 5,
             fill="#000", tags="arrow",
         )
 
         # join
         sc.create_line(
-            start, 10,
-            end, 10,
+            start, SCRUBBER_HEIGHT/2,
+            end, SCRUBBER_HEIGHT/2,
             fill="#000", tags="arrow",
         )
 
@@ -857,12 +869,12 @@ class _App:
 
         for n in range(rs_px, rs_px + rl_px, 100):
             label = " +%.4f" % (float(n) / _sc - _rl)
-            self.canvas.create_line(n - rs_px, 0, n - rs_px, 20 + len(self.threads) * ROW_HEIGHT, fill="#CCC", tags="grid")
+            self.canvas.create_line(n - rs_px, 0, n - rs_px, HEADER_HEIGHT + len(self.threads) * MAX_DEPTH * BLOCK_HEIGHT, fill="#CCC", tags="grid")
             self.canvas.create_text(n - rs_px, 5, text=label, anchor=NW, tags="time_label grid")
 
         for n in range(0, len(self.threads)):
-            self.canvas.create_line(0, 20 + ROW_HEIGHT * n, rl_px, 20 + ROW_HEIGHT * n, tags="grid")
-            self.canvas.create_text(0, 20 + ROW_HEIGHT * (n + 1) - 5, text=" " + self.threads[n], anchor=SW, tags="grid")
+            self.canvas.create_line(0, HEADER_HEIGHT + MAX_DEPTH * BLOCK_HEIGHT * n, rl_px, HEADER_HEIGHT + MAX_DEPTH * BLOCK_HEIGHT * n, tags="grid")
+            self.canvas.create_text(0, HEADER_HEIGHT + MAX_DEPTH * BLOCK_HEIGHT * (n + 1) - 5, text=" " + self.threads[n], anchor=SW, tags="grid")
 
         self.canvas.tag_lower("grid")
 
@@ -888,6 +900,8 @@ class _App:
 
             if event.start_type == "START":
                 if (event.end_time - event.start_time) * 1000 < _rc:
+                    continue
+                if event.depth >= MAX_DEPTH:
                     continue
                 shown += 1
                 if shown == 500 and VERSION.endswith("-demo"):
@@ -929,12 +943,12 @@ class _App:
         fill = "#CFC" if ok else "#FCC"
         outl = "#484" if ok else "#844"
         r = self.canvas.create_rectangle(
-            start_px, 20 + thread * ROW_HEIGHT + event.depth * BLOCK_HEIGHT,
-            start_px + length_px, 20 + thread * ROW_HEIGHT + event.depth * BLOCK_HEIGHT + BLOCK_HEIGHT,
+            start_px, HEADER_HEIGHT + thread * MAX_DEPTH * BLOCK_HEIGHT + event.depth * BLOCK_HEIGHT,
+            start_px + length_px, HEADER_HEIGHT + thread * MAX_DEPTH * BLOCK_HEIGHT + event.depth * BLOCK_HEIGHT + BLOCK_HEIGHT,
             fill=fill, outline=outl, tags="event",
         )
         t = self.canvas.create_text(
-            start_px, 20 + thread * ROW_HEIGHT + event.depth * BLOCK_HEIGHT + 3,
+            start_px, HEADER_HEIGHT + thread * MAX_DEPTH * BLOCK_HEIGHT + event.depth * BLOCK_HEIGHT + 3,
             text=self.truncate_text(" " + event.text, length_px), tags="event event_label", anchor=NW, width=length_px,
             font="TkFixedFont",
             state="disabled",
@@ -956,12 +970,12 @@ class _App:
 
         fill = "#FDD" if event.start_type == "LOCKW" else "#DDF"
         r = self.canvas.create_rectangle(
-            start_px, 20 + thread * ROW_HEIGHT,
-            start_px + length_px, 20 + (thread + 1) * ROW_HEIGHT,
+            start_px, HEADER_HEIGHT + thread * MAX_DEPTH * BLOCK_HEIGHT,
+            start_px + length_px, HEADER_HEIGHT + (thread + 1) * MAX_DEPTH * BLOCK_HEIGHT,
             fill=fill, outline=fill, tags="lock",
         )
         t = self.canvas.create_text(
-            start_px + length_px, 20 + (thread + 1) * ROW_HEIGHT,
+            start_px + length_px, HEADER_HEIGHT + (thread + 1) * MAX_DEPTH * BLOCK_HEIGHT,
             text=self.truncate_text(event.text, length_px),
             tags="lock lock_label", anchor=SE, width=length_px,
             font="TkFixedFont",
@@ -974,7 +988,7 @@ class _App:
     def _focus(self, r):
         # scale the canvas so that the (selected item width + padding == screen width)
         view_w = self.canvas.winfo_width()
-        rect_w = max(self.canvas.bbox(r)[2] - self.canvas.bbox(r)[0] + 20, 10)
+        rect_w = max(self.canvas.bbox(r)[2] - self.canvas.bbox(r)[0] + HEADER_HEIGHT, 10)
         self.scale_view(n=float(view_w) / rect_w)
 
         # move the view so that the selected (item x1 = left edge of screen + padding)
@@ -1016,13 +1030,13 @@ def main(argv=sys.argv):
     parser = OptionParser()
     parser.add_option("-g", "--geometry", dest="geometry", default="1000x600",
                       help="location and size of window", metavar="GM")
-    parser.add_option("-t", "--thread-height", dest="thread_height", default=7,
-                      type=int, help="how many rows to show in each thread", metavar="ROWS")
+    parser.add_option("-d", "--depth", dest="depth", default=7,
+                      type=int, help="how many rows to show in each stack", metavar="DEPTH")
     (options, args) = parser.parse_args(argv)
 
     # lol constants
-    global ROW_HEIGHT
-    ROW_HEIGHT = options.thread_height * BLOCK_HEIGHT
+    global MAX_DEPTH
+    MAX_DEPTH = options.depth
 
     if len(args) > 1:
         filename = args[1]
