@@ -714,6 +714,8 @@ class _App:
                         else:
                             thread_level_ends[thread_idx].append(event)
                             self.data.append(event)
+                    else:
+                        self.data.append(event)
             except sqlite3.OperationalError:
                 pass
 
