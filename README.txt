@@ -7,7 +7,4 @@ Requirements:
  - nsis
  - python2.7
    - tkinter
-
-Recommended:
-  - Eclipse Juno
-    - PyDev
+ - librsvg2-bin
